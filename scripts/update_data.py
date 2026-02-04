@@ -155,36 +155,48 @@ def get_crypto_data(coin_id: str, symbol: str, days: int = 365) -> list:
         'interval': 'daily'
     }
     
-    try:
-        response = requests.get(url, params=params)
-        response.raise_for_status()
-        data = response.json()
-        
-        prices = []
-        for item in data['prices']:
-            timestamp = item[0] / 1000
-            date = datetime.fromtimestamp(timestamp).strftime('%Y-%m-%d')
-            price = item[1]
+    # Retry up to 3 times with increasing delay
+    for attempt in range(3):
+        try:
+            response = requests.get(url, params=params, timeout=30)
             
-            if price < 0.01:
-                prices.append({"date": date, "price": round(price, 8)})
-            elif price < 1:
-                prices.append({"date": date, "price": round(price, 6)})
-            else:
-                prices.append({"date": date, "price": round(price, 2)})
-        
-        # Remove duplicates
-        seen = {}
-        for p in prices:
-            seen[p["date"]] = p
-        prices = list(seen.values())
-        prices.sort(key=lambda x: x["date"])
-        
-        return prices
-        
-    except Exception as e:
-        print(f"    Error fetching {coin_id}: {e}")
-        return []
+            if response.status_code == 429:
+                wait_time = 30 * (attempt + 1)
+                print(f"    Rate limited. Waiting {wait_time}s...")
+                time.sleep(wait_time)
+                continue
+            
+            response.raise_for_status()
+            data = response.json()
+            
+            prices = []
+            for item in data['prices']:
+                timestamp = item[0] / 1000
+                date = datetime.fromtimestamp(timestamp).strftime('%Y-%m-%d')
+                price = item[1]
+                
+                if price < 0.01:
+                    prices.append({"date": date, "price": round(price, 8)})
+                elif price < 1:
+                    prices.append({"date": date, "price": round(price, 6)})
+                else:
+                    prices.append({"date": date, "price": round(price, 2)})
+            
+            # Remove duplicates
+            seen = {}
+            for p in prices:
+                seen[p["date"]] = p
+            prices = list(seen.values())
+            prices.sort(key=lambda x: x["date"])
+            
+            return prices
+            
+        except Exception as e:
+            print(f"    Attempt {attempt + 1}/3 failed: {e}")
+            if attempt < 2:
+                time.sleep(15)
+    
+    return []
 
 
 def calculate_performance(prices: list) -> dict:
@@ -249,6 +261,8 @@ def main():
     print("=" * 60)
     print("Crypto Treasury Companies Data Updater")
     print("Using: yfinance (stocks) + CoinGecko (crypto)")
+    print("Note: CoinGecko free API has rate limits (~5 calls/min)")
+    print("      This will take about 2-3 minutes to complete.")
     print("=" * 60)
     
     output_data = {
@@ -274,7 +288,8 @@ def main():
         category_data["coin_performance"] = calculate_performance(coin_prices)
         print(f"    -> {len(coin_prices)} data points")
         
-        time.sleep(1)  # Rate limiting for CoinGecko
+        print("    (waiting 12s for rate limit...)")
+        time.sleep(12)  # CoinGecko free API: ~5 calls/min
         
         # Fetch stock data for each company
         for i, company in enumerate(config["companies"]):

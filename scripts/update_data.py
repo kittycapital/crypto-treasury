@@ -2,7 +2,7 @@
 """
 Crypto Treasury Companies Data Updater
 - Stocks: yfinance
-- Crypto: CoinCap API (free, no API key required)
+- Crypto: CoinGecko (free, no API key)
 """
 
 import json
@@ -142,52 +142,30 @@ def get_stock_data(ticker: str, days: int = 400) -> list:
         return []
 
 
-def get_crypto_data(coin_id: str, symbol: str, days: int = 400) -> list:
-    """Fetch crypto price data using CoinCap API (free, no API key)"""
+def get_crypto_data(coin_id: str, symbol: str, days: int = 365) -> list:
+    """Fetch crypto price data using CoinGecko (no API key)"""
     
-    print(f"  Fetching {coin_id} prices from CoinCap...")
+    print(f"  Fetching {coin_id} prices from CoinGecko...")
     
-    # CoinCap uses different IDs for some coins
-    COINCAP_IDS = {
-        "bitcoin": "bitcoin",
-        "ethereum": "ethereum",
-        "solana": "solana",
-        "binancecoin": "binance-coin",
-        "injective-protocol": "injective-protocol",
-        "sui": "sui",
-        "bonk": "bonk",
-        "hyperliquid": "hyperliquid",
-        "story-protocol": "story",
+    url = f"https://api.coingecko.com/api/v3/coins/{coin_id}/market_chart"
+    
+    params = {
+        'vs_currency': 'usd',
+        'days': days,
+        'interval': 'daily'
     }
     
-    coincap_id = COINCAP_IDS.get(coin_id, coin_id)
-    
     try:
-        # Calculate start and end timestamps
-        end_time = int(datetime.now().timestamp() * 1000)
-        start_time = int((datetime.now() - timedelta(days=days)).timestamp() * 1000)
-        
-        url = f"https://api.coincap.io/v2/assets/{coincap_id}/history"
-        params = {
-            "interval": "d1",
-            "start": start_time,
-            "end": end_time
-        }
-        
-        response = requests.get(url, params=params, timeout=30)
-        
-        if response.status_code != 200:
-            print(f"    Error: {response.status_code} - {response.text[:100]}")
-            return []
-        
+        response = requests.get(url, params=params)
+        response.raise_for_status()
         data = response.json()
         
         prices = []
-        for item in data.get("data", []):
-            price = float(item["priceUsd"])
-            date = item["date"][:10]  # "2024-01-01T00:00:00.000Z" -> "2024-01-01"
+        for item in data['prices']:
+            timestamp = item[0] / 1000
+            date = datetime.fromtimestamp(timestamp).strftime('%Y-%m-%d')
+            price = item[1]
             
-            # Handle very small prices (like BONK)
             if price < 0.01:
                 prices.append({"date": date, "price": round(price, 8)})
             elif price < 1:
@@ -195,7 +173,7 @@ def get_crypto_data(coin_id: str, symbol: str, days: int = 400) -> list:
             else:
                 prices.append({"date": date, "price": round(price, 2)})
         
-        # Remove duplicates (keep last entry for each date)
+        # Remove duplicates
         seen = {}
         for p in prices:
             seen[p["date"]] = p
@@ -270,7 +248,7 @@ def calculate_performance(prices: list) -> dict:
 def main():
     print("=" * 60)
     print("Crypto Treasury Companies Data Updater")
-    print("Using: yfinance (stocks) + CoinCap (crypto)")
+    print("Using: yfinance (stocks) + CoinGecko (crypto)")
     print("=" * 60)
     
     output_data = {

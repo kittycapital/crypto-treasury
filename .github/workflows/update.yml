@@ -24,6 +24,8 @@ jobs:
           pip install yfinance requests
 
       - name: Run update script
+        env:
+          COINGECKO_API_KEY: CG-Cpup6PximTizhS7JP5yoQBJb
         run: |
           python scripts/update_data.py
 

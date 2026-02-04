@@ -142,66 +142,74 @@ def get_stock_data(ticker: str, days: int = 400) -> list:
         return []
 
 
-def get_crypto_data(coin_id: str, days: int = 400) -> list:
-    """Fetch crypto price data using CoinGecko API with retry logic"""
-    max_retries = 3
+def get_crypto_data(coin_id: str, symbol: str, days: int = 400) -> list:
+    """Fetch crypto price data using Binance API (free, no auth required)"""
     
-    for attempt in range(max_retries):
-        try:
-            url = f"https://api.coingecko.com/api/v3/coins/{coin_id}/market_chart"
-            params = {
-                "vs_currency": "usd",
-                "days": days,
-                "interval": "daily"
-            }
-            
-            headers = {
-                "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"
-            }
-            
-            response = requests.get(url, params=params, headers=headers, timeout=30)
-            
-            if response.status_code == 429:  # Rate limited
-                wait_time = (attempt + 1) * 60  # Wait 60, 120, 180 seconds
-                print(f"  Rate limited. Waiting {wait_time} seconds...")
-                time.sleep(wait_time)
-                continue
-                
-            response.raise_for_status()
-            data = response.json()
-            
-            prices = []
-            for item in data.get("prices", []):
-                timestamp, price = item
-                date = datetime.fromtimestamp(timestamp / 1000).strftime("%Y-%m-%d")
-                prices.append({
-                    "date": date,
-                    "price": round(price, 6) if price < 1 else round(price, 2)
-                })
-            
-            # Remove duplicates (keep last entry for each date)
-            seen = {}
-            for p in prices:
-                seen[p["date"]] = p
-            prices = list(seen.values())
-            prices.sort(key=lambda x: x["date"])
-            
-            if prices:
-                print(f"    -> Got {len(prices)} price points for {coin_id}")
-            
-            return prices
-            
-        except requests.exceptions.RequestException as e:
-            print(f"  Attempt {attempt + 1}/{max_retries} failed for {coin_id}: {e}")
-            if attempt < max_retries - 1:
-                time.sleep(5)
-            continue
-        except Exception as e:
-            print(f"  Error fetching {coin_id}: {e}")
+    # Map coin_id to Binance trading pair
+    BINANCE_SYMBOLS = {
+        "bitcoin": "BTCUSDT",
+        "ethereum": "ETHUSDT",
+        "solana": "SOLUSDT",
+        "hyperliquid": "HYPEUSDT",
+        "sui": "SUIUSDT",
+        "injective-protocol": "INJUSDT",
+        "binancecoin": "BNBUSDT",
+        "bonk": "BONKUSDT",
+        "story-protocol": "IPUSDT",  # May not be available
+    }
+    
+    binance_symbol = BINANCE_SYMBOLS.get(coin_id)
+    
+    if not binance_symbol:
+        print(f"  No Binance symbol for {coin_id}, skipping...")
+        return []
+    
+    try:
+        # Binance klines API - free, no auth required
+        url = "https://api.binance.com/api/v3/klines"
+        params = {
+            "symbol": binance_symbol,
+            "interval": "1d",
+            "limit": min(days, 1000)  # Binance max is 1000
+        }
+        
+        response = requests.get(url, params=params, timeout=30)
+        
+        if response.status_code == 400:
+            # Symbol might not exist on Binance
+            print(f"  Symbol {binance_symbol} not found on Binance")
             return []
-    
-    print(f"  Failed to fetch {coin_id} after {max_retries} attempts")
-    return []
+            
+        response.raise_for_status()
+        data = response.json()
+        
+        prices = []
+        for candle in data:
+            # Binance kline: [open_time, open, high, low, close, volume, ...]
+            timestamp = candle[0]
+            close_price = float(candle[4])
+            date = datetime.fromtimestamp(timestamp / 1000).strftime("%Y-%m-%d")
+            
+            # Handle very small prices (like BONK)
+            if close_price < 0.01:
+                prices.append({"date": date, "price": round(close_price, 8)})
+            elif close_price < 1:
+                prices.append({"date": date, "price": round(close_price, 6)})
+            else:
+                prices.append({"date": date, "price": round(close_price, 2)})
+        
+        # Remove duplicates
+        seen = {}
+        for p in prices:
+            seen[p["date"]] = p
+        prices = list(seen.values())
+        prices.sort(key=lambda x: x["date"])
+        
+        return prices
+        
+    except Exception as e:
+        print(f"  Error fetching {coin_id} from Binance: {e}")
+        return []
 
 
 def calculate_performance(prices: list) -> dict:
@@ -284,14 +292,14 @@ def main():
             "companies": []
         }
         
-        # Fetch crypto data
-        print(f"  Fetching {config['coin_id']} prices...")
-        coin_prices = get_crypto_data(config["coin_id"])
+        # Fetch crypto data from Binance
+        print(f"  Fetching {config['coin_id']} prices from Binance...")
+        coin_prices = get_crypto_data(config["coin_id"], config["coin_symbol"])
         category_data["coin_prices"] = coin_prices
         category_data["coin_performance"] = calculate_performance(coin_prices)
         print(f"    -> {len(coin_prices)} data points")
         
-        time.sleep(1)  # Rate limiting for CoinGecko
+        time.sleep(0.5)  # Small delay between requests
         
         # Fetch stock data for each company
         for i, company in enumerate(config["companies"]):

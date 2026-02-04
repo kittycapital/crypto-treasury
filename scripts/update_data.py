@@ -143,45 +143,71 @@ def get_stock_data(ticker: str, days: int = 400) -> list:
 
 
 def get_crypto_data(coin_id: str, days: int = 400) -> list:
-    """Fetch crypto price data using CoinGecko API"""
-    try:
-        url = f"https://api.coingecko.com/api/v3/coins/{coin_id}/market_chart"
-        params = {
-            "vs_currency": "usd",
-            "days": days,
-            "interval": "daily"
-        }
-        
-        response = requests.get(url, params=params, timeout=30)
-        response.raise_for_status()
-        data = response.json()
-        
-        prices = []
-        for item in data.get("prices", []):
-            timestamp, price = item
-            date = datetime.fromtimestamp(timestamp / 1000).strftime("%Y-%m-%d")
-            prices.append({
-                "date": date,
-                "price": round(price, 2)
-            })
-        
-        # Remove duplicates (keep last entry for each date)
-        seen = {}
-        for p in prices:
-            seen[p["date"]] = p
-        prices = list(seen.values())
-        prices.sort(key=lambda x: x["date"])
-        
-        return prices
-    except Exception as e:
-        print(f"  Error fetching {coin_id}: {e}")
-        return []
+    """Fetch crypto price data using CoinGecko API with retry logic"""
+    max_retries = 3
+    
+    for attempt in range(max_retries):
+        try:
+            url = f"https://api.coingecko.com/api/v3/coins/{coin_id}/market_chart"
+            params = {
+                "vs_currency": "usd",
+                "days": days,
+                "interval": "daily"
+            }
+            
+            headers = {
+                "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"
+            }
+            
+            response = requests.get(url, params=params, headers=headers, timeout=30)
+            
+            if response.status_code == 429:  # Rate limited
+                wait_time = (attempt + 1) * 60  # Wait 60, 120, 180 seconds
+                print(f"  Rate limited. Waiting {wait_time} seconds...")
+                time.sleep(wait_time)
+                continue
+                
+            response.raise_for_status()
+            data = response.json()
+            
+            prices = []
+            for item in data.get("prices", []):
+                timestamp, price = item
+                date = datetime.fromtimestamp(timestamp / 1000).strftime("%Y-%m-%d")
+                prices.append({
+                    "date": date,
+                    "price": round(price, 6) if price < 1 else round(price, 2)
+                })
+            
+            # Remove duplicates (keep last entry for each date)
+            seen = {}
+            for p in prices:
+                seen[p["date"]] = p
+            prices = list(seen.values())
+            prices.sort(key=lambda x: x["date"])
+            
+            if prices:
+                print(f"    -> Got {len(prices)} price points for {coin_id}")
+            
+            return prices
+            
+        except requests.exceptions.RequestException as e:
+            print(f"  Attempt {attempt + 1}/{max_retries} failed for {coin_id}: {e}")
+            if attempt < max_retries - 1:
+                time.sleep(5)
+            continue
+        except Exception as e:
+            print(f"  Error fetching {coin_id}: {e}")
+            return []
+    
+    print(f"  Failed to fetch {coin_id} after {max_retries} attempts")
+    return []
 
 
 def calculate_performance(prices: list) -> dict:
     """Calculate performance for different periods"""
     if not prices or len(prices) < 2:
-        return {"1W": None, "3M": None, "6M": None, "1Y": None}
+        return {"1W": None, "3M": None, "6M": None, "YTD": None, "1Y": None}
     
     current_price = prices[-1]["price"]
     current_date = datetime.strptime(prices[-1]["date"], "%Y-%m-%d")
@@ -214,6 +240,24 @@ def calculate_performance(prices: list) -> dict:
             performance[period_name] = round(perf, 2)
         else:
             performance[period_name] = None
+    
+    # Calculate YTD (Year-to-Date)
+    ytd_start = datetime(current_date.year, 1, 1)
+    ytd_price = None
+    min_diff = float('inf')
+    
+    for p in prices:
+        p_date = datetime.strptime(p["date"], "%Y-%m-%d")
+        diff = abs((p_date - ytd_start).days)
+        if diff < min_diff and p_date >= ytd_start:
+            min_diff = diff
+            ytd_price = p["price"]
+    
+    if ytd_price and ytd_price > 0:
+        ytd_perf = ((current_price - ytd_price) / ytd_price) * 100
+        performance["YTD"] = round(ytd_perf, 2)
+    else:
+        performance["YTD"] = None
     
     return performance
 

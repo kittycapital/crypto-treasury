@@ -2,7 +2,7 @@
 """
 Crypto Treasury Companies Data Updater
 - Stocks: yfinance
-- Crypto: CoinGecko API
+- Crypto: CoinCap API (free, no API key required)
 """
 
 import json
@@ -11,12 +11,6 @@ from datetime import datetime, timedelta
 import yfinance as yf
 import requests
 import time
-
-# ============================================================
-# CONFIGURATION - Set your CoinGecko API key here
-# ============================================================
-COINGECKO_API_KEY = os.environ.get("COINGECKO_API_KEY", "YOUR_API_KEY_HERE")
-# ============================================================
 
 # Treasury Companies by Crypto
 TREASURY_COMPANIES = {
@@ -149,39 +143,49 @@ def get_stock_data(ticker: str, days: int = 400) -> list:
 
 
 def get_crypto_data(coin_id: str, symbol: str, days: int = 400) -> list:
-    """Fetch crypto price data using CoinGecko API with API key"""
+    """Fetch crypto price data using CoinCap API (free, no API key)"""
     
-    print(f"  Fetching {coin_id} prices from CoinGecko...")
+    print(f"  Fetching {coin_id} prices from CoinCap...")
+    
+    # CoinCap uses different IDs for some coins
+    COINCAP_IDS = {
+        "bitcoin": "bitcoin",
+        "ethereum": "ethereum",
+        "solana": "solana",
+        "binancecoin": "binance-coin",
+        "injective-protocol": "injective-protocol",
+        "sui": "sui",
+        "bonk": "bonk",
+        "hyperliquid": "hyperliquid",
+        "story-protocol": "story",
+    }
+    
+    coincap_id = COINCAP_IDS.get(coin_id, coin_id)
     
     try:
-        # Use Demo API endpoint
-        url = f"https://api.coingecko.com/api/v3/coins/{coin_id}/market_chart"
+        # Calculate start and end timestamps
+        end_time = int(datetime.now().timestamp() * 1000)
+        start_time = int((datetime.now() - timedelta(days=days)).timestamp() * 1000)
         
+        url = f"https://api.coincap.io/v2/assets/{coincap_id}/history"
         params = {
-            "vs_currency": "usd",
-            "days": days,
-            "interval": "daily",
-            "x_cg_demo_api_key": COINGECKO_API_KEY  # Pass as query param
+            "interval": "d1",
+            "start": start_time,
+            "end": end_time
         }
         
-        headers = {
-            "accept": "application/json",
-            "x-cg-demo-api-key": COINGECKO_API_KEY  # Also pass in header
-        }
+        response = requests.get(url, params=params, timeout=30)
         
-        response = requests.get(url, params=params, headers=headers, timeout=30)
-        
-        if response.status_code == 401:
-            print(f"    401 Unauthorized - Check your API key")
+        if response.status_code != 200:
+            print(f"    Error: {response.status_code} - {response.text[:100]}")
             return []
         
-        response.raise_for_status()
         data = response.json()
         
         prices = []
-        for item in data.get("prices", []):
-            timestamp, price = item
-            date = datetime.fromtimestamp(timestamp / 1000).strftime("%Y-%m-%d")
+        for item in data.get("data", []):
+            price = float(item["priceUsd"])
+            date = item["date"][:10]  # "2024-01-01T00:00:00.000Z" -> "2024-01-01"
             
             # Handle very small prices (like BONK)
             if price < 0.01:
@@ -201,7 +205,7 @@ def get_crypto_data(coin_id: str, symbol: str, days: int = 400) -> list:
         return prices
         
     except Exception as e:
-        print(f"  Error fetching {coin_id}: {e}")
+        print(f"    Error fetching {coin_id}: {e}")
         return []
 
 
@@ -266,18 +270,8 @@ def calculate_performance(prices: list) -> dict:
 def main():
     print("=" * 60)
     print("Crypto Treasury Companies Data Updater")
+    print("Using: yfinance (stocks) + CoinCap (crypto)")
     print("=" * 60)
-    
-    # Check for API key
-    if not COINGECKO_API_KEY or COINGECKO_API_KEY == "YOUR_API_KEY_HERE":
-        print("\n⚠️  WARNING: CoinGecko API key not set!")
-        print("Option 1: Set environment variable:")
-        print("  export COINGECKO_API_KEY=your_api_key")
-        print("Option 2: Edit the script and replace 'YOUR_API_KEY_HERE'\n")
-    else:
-        # Show first 10 chars of API key for debugging
-        key_preview = COINGECKO_API_KEY[:10] + "..." if len(COINGECKO_API_KEY) > 10 else COINGECKO_API_KEY
-        print(f"\n✓ CoinGecko API key: {key_preview}\n")
     
     output_data = {
         "updated_at": datetime.now().strftime("%Y-%m-%d %H:%M"),

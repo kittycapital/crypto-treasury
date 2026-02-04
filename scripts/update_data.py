@@ -154,27 +154,27 @@ def get_crypto_data(coin_id: str, symbol: str, days: int = 400) -> list:
     print(f"  Fetching {coin_id} prices from CoinGecko...")
     
     try:
-        # Check if it's a Demo or Pro API key
-        if COINGECKO_API_KEY.startswith("CG-"):
-            # Demo API
-            url = f"https://api.coingecko.com/api/v3/coins/{coin_id}/market_chart"
-            headers = {
-                "x-cg-demo-api-key": COINGECKO_API_KEY
-            }
-        else:
-            # Pro API
-            url = f"https://pro-api.coingecko.com/api/v3/coins/{coin_id}/market_chart"
-            headers = {
-                "x-cg-pro-api-key": COINGECKO_API_KEY
-            }
+        # Use Demo API endpoint
+        url = f"https://api.coingecko.com/api/v3/coins/{coin_id}/market_chart"
         
         params = {
             "vs_currency": "usd",
             "days": days,
-            "interval": "daily"
+            "interval": "daily",
+            "x_cg_demo_api_key": COINGECKO_API_KEY  # Pass as query param
+        }
+        
+        headers = {
+            "accept": "application/json",
+            "x-cg-demo-api-key": COINGECKO_API_KEY  # Also pass in header
         }
         
         response = requests.get(url, params=params, headers=headers, timeout=30)
+        
+        if response.status_code == 401:
+            print(f"    401 Unauthorized - Check your API key")
+            return []
+        
         response.raise_for_status()
         data = response.json()
         
@@ -275,8 +275,9 @@ def main():
         print("  export COINGECKO_API_KEY=your_api_key")
         print("Option 2: Edit the script and replace 'YOUR_API_KEY_HERE'\n")
     else:
-        api_type = "Demo" if COINGECKO_API_KEY.startswith("CG-") else "Pro"
-        print(f"\n✓ CoinGecko {api_type} API key configured\n")
+        # Show first 10 chars of API key for debugging
+        key_preview = COINGECKO_API_KEY[:10] + "..." if len(COINGECKO_API_KEY) > 10 else COINGECKO_API_KEY
+        print(f"\n✓ CoinGecko API key: {key_preview}\n")
     
     output_data = {
         "updated_at": datetime.now().strftime("%Y-%m-%d %H:%M"),

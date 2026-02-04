@@ -100,7 +100,7 @@ TREASURY_COMPANIES = {
         ]
     },
     "IP": {
-        "coin_id": "story-protocol",
+        "coin_id": "story",
         "coin_symbol": "IP",
         "color": "#9945ff",
         "companies": [

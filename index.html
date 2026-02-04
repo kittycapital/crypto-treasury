@@ -1,0 +1,641 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>크립토 트레저리 회사 비교</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { 
+            font-family: 'Inter', -apple-system, sans-serif; 
+            background: #000; 
+            color: #fff;
+            min-height: 100vh;
+            padding: 20px;
+        }
+        .container { max-width: 1400px; margin: 0 auto; }
+        
+        .header { 
+            display: flex; 
+            justify-content: space-between; 
+            align-items: center; 
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+            gap: 16px;
+        }
+        .title { font-size: 24px; font-weight: 700; }
+        .updated { font-size: 12px; color: #6b7280; }
+        
+        /* Category Tabs */
+        .category-tabs {
+            display: flex;
+            gap: 4px;
+            background: #111;
+            padding: 4px;
+            border-radius: 8px;
+            margin-bottom: 16px;
+            flex-wrap: wrap;
+        }
+        .category-tab {
+            padding: 10px 16px;
+            border: none;
+            background: transparent;
+            color: #9ca3af;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            border-radius: 6px;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        .category-tab:hover { color: #fff; background: #1a1a1a; }
+        .category-tab.active { background: #1f2937; color: #fff; }
+        .category-tab .coin-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+        }
+        
+        /* Period Buttons */
+        .period-buttons {
+            display: flex;
+            gap: 8px;
+            background: #111;
+            padding: 4px;
+            border-radius: 8px;
+        }
+        .period-btn {
+            padding: 8px 16px;
+            border: none;
+            background: transparent;
+            color: #9ca3af;
+            font-size: 14px;
+            font-weight: 500;
+            cursor: pointer;
+            border-radius: 6px;
+            transition: all 0.2s;
+        }
+        .period-btn:hover { color: #fff; }
+        .period-btn.active { background: #3b82f6; color: #fff; }
+        
+        .controls {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 12px;
+            margin-bottom: 20px;
+        }
+        
+        .main-content {
+            display: grid;
+            grid-template-columns: 1fr 340px;
+            gap: 20px;
+        }
+        @media (max-width: 1024px) {
+            .main-content { grid-template-columns: 1fr; }
+        }
+        
+        .chart-container {
+            background: #111;
+            border-radius: 12px;
+            padding: 20px;
+            height: 520px;
+        }
+        
+        .stats-box {
+            background: #111;
+            border-radius: 12px;
+            padding: 20px;
+            max-height: 520px;
+            overflow-y: auto;
+        }
+        .stats-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 16px;
+            padding-bottom: 12px;
+            border-bottom: 1px solid #222;
+        }
+        .stats-title {
+            font-size: 16px;
+            font-weight: 600;
+            color: #9ca3af;
+        }
+        .coin-badge {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            padding: 4px 10px;
+            background: #1a1a1a;
+            border-radius: 20px;
+            font-size: 13px;
+            font-weight: 600;
+        }
+        .coin-badge .dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+        }
+        
+        .stats-list { list-style: none; }
+        .stats-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 12px 8px;
+            border-bottom: 1px solid #1a1a1a;
+            cursor: pointer;
+            border-radius: 6px;
+            transition: all 0.2s;
+        }
+        .stats-item:hover { background: #1a1a1a; }
+        .stats-item.highlighted { background: #1e3a5f; }
+        .stats-item:last-child { border-bottom: none; }
+        .stats-item.coin-row {
+            background: #0a0a0a;
+            border: 1px solid #222;
+            margin-bottom: 8px;
+        }
+        .stats-item.coin-row:hover { background: #111; }
+        .stats-item.coin-row.highlighted { background: #1e3a5f; border-color: #3b82f6; }
+        
+        .stats-rank {
+            width: 24px;
+            font-size: 12px;
+            color: #6b7280;
+            font-weight: 500;
+        }
+        .stats-asset {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            flex: 1;
+        }
+        .stats-dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            flex-shrink: 0;
+        }
+        .stats-info {
+            display: flex;
+            flex-direction: column;
+            gap: 2px;
+        }
+        .stats-name { 
+            font-weight: 500; 
+            font-size: 14px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            max-width: 140px;
+        }
+        .stats-ticker { 
+            color: #6b7280; 
+            font-size: 11px;
+            font-weight: 600;
+        }
+        .stats-perf {
+            font-weight: 600;
+            font-size: 15px;
+            text-align: right;
+            min-width: 70px;
+        }
+        .stats-perf.positive { color: #22c55e; }
+        .stats-perf.negative { color: #ef4444; }
+        
+        /* Scrollbar styling */
+        .stats-box::-webkit-scrollbar {
+            width: 6px;
+        }
+        .stats-box::-webkit-scrollbar-track {
+            background: #1a1a1a;
+            border-radius: 3px;
+        }
+        .stats-box::-webkit-scrollbar-thumb {
+            background: #333;
+            border-radius: 3px;
+        }
+        .stats-box::-webkit-scrollbar-thumb:hover {
+            background: #444;
+        }
+
+        .legend-note {
+            font-size: 11px;
+            color: #6b7280;
+            margin-top: 12px;
+            padding-top: 12px;
+            border-top: 1px solid #222;
+            text-align: center;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <div>
+                <h1 class="title">크립토 트레저리 회사 비교</h1>
+                <p class="updated">마지막 업데이트: <span id="updated-time">-</span></p>
+            </div>
+        </div>
+        
+        <div class="category-tabs" id="category-tabs"></div>
+        
+        <div class="controls">
+            <div class="period-buttons">
+                <button class="period-btn" data-period="1W">1주</button>
+                <button class="period-btn" data-period="3M">3개월</button>
+                <button class="period-btn" data-period="6M">6개월</button>
+                <button class="period-btn active" data-period="1Y">1년</button>
+            </div>
+        </div>
+        
+        <div class="main-content">
+            <div class="chart-container">
+                <canvas id="perfChart"></canvas>
+            </div>
+            
+            <div class="stats-box">
+                <div class="stats-header">
+                    <div class="stats-title">수익률 (<span id="period-label">1Y</span>)</div>
+                    <div class="coin-badge" id="coin-badge">
+                        <span class="dot"></span>
+                        <span class="symbol">BTC</span>
+                    </div>
+                </div>
+                <ul class="stats-list" id="stats-list"></ul>
+                <div class="legend-note">클릭하면 차트에서 해당 라인이 강조됩니다</div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Data will be loaded from JSON
+        let TREASURY_DATA = null;
+        let currentCategory = 'BTC';
+        let currentPeriod = '1Y';
+        let chart = null;
+        let highlightedAsset = null;
+        
+        // Category display info
+        const CATEGORY_INFO = {
+            'BTC': { name: 'Bitcoin', shortName: 'BTC' },
+            'ETH': { name: 'Ethereum', shortName: 'ETH' },
+            'SOL': { name: 'Solana', shortName: 'SOL' },
+            'HYPE': { name: 'Hyperliquid', shortName: 'HYPE' },
+            'SUI': { name: 'Sui', shortName: 'SUI' },
+            'INJ': { name: 'Injective', shortName: 'INJ' },
+            'BNB': { name: 'BNB', shortName: 'BNB' },
+            'BONK': { name: 'Bonk', shortName: 'BONK' },
+            'IP': { name: 'Story', shortName: 'IP' }
+        };
+
+        // Period to days mapping
+        const PERIOD_DAYS = {
+            '1W': 7,
+            '3M': 90,
+            '6M': 180,
+            '1Y': 365
+        };
+
+        // Load data
+        async function loadData() {
+            try {
+                const response = await fetch('data/treasury_data.json');
+                TREASURY_DATA = await response.json();
+                document.getElementById('updated-time').textContent = TREASURY_DATA.updated_at;
+                initializeTabs();
+                updateChart();
+                updateStats();
+            } catch (error) {
+                console.error('Failed to load data:', error);
+                document.getElementById('updated-time').textContent = 'Data load failed';
+            }
+        }
+
+        // Initialize category tabs
+        function initializeTabs() {
+            const tabsContainer = document.getElementById('category-tabs');
+            const categories = Object.keys(TREASURY_DATA.categories);
+            
+            tabsContainer.innerHTML = categories.map(cat => {
+                const data = TREASURY_DATA.categories[cat];
+                const isActive = cat === currentCategory ? 'active' : '';
+                return `
+                    <button class="category-tab ${isActive}" data-category="${cat}">
+                        <span class="coin-dot" style="background: ${data.coin_color}"></span>
+                        ${CATEGORY_INFO[cat]?.shortName || cat}
+                    </button>
+                `;
+            }).join('');
+
+            // Add click events
+            tabsContainer.querySelectorAll('.category-tab').forEach(tab => {
+                tab.addEventListener('click', () => {
+                    document.querySelectorAll('.category-tab').forEach(t => t.classList.remove('active'));
+                    tab.classList.add('active');
+                    currentCategory = tab.dataset.category;
+                    highlightedAsset = null;
+                    updateChart();
+                    updateStats();
+                });
+            });
+        }
+
+        // Get start date for period
+        function getStartDate(period) {
+            const now = new Date();
+            const days = PERIOD_DAYS[period] || 365;
+            return new Date(now - days * 24 * 60 * 60 * 1000);
+        }
+
+        // Calculate percent change from prices
+        function calculatePercentChange(prices, startDate) {
+            if (!prices || prices.length === 0) return [];
+            
+            const startStr = startDate.toISOString().split('T')[0];
+            const filtered = prices.filter(p => p.date >= startStr);
+            
+            if (filtered.length === 0) return [];
+            
+            const basePrice = filtered[0].price;
+            if (basePrice === 0) return [];
+            
+            return filtered.map(p => ({
+                x: p.date,
+                y: ((p.price - basePrice) / basePrice * 100).toFixed(2)
+            }));
+        }
+
+        // Update chart
+        function updateChart() {
+            if (!TREASURY_DATA) return;
+            
+            const categoryData = TREASURY_DATA.categories[currentCategory];
+            if (!categoryData) return;
+
+            const startDate = getStartDate(currentPeriod);
+            const datasets = [];
+
+            // Add coin data first
+            const coinPercentData = calculatePercentChange(categoryData.coin_prices, startDate);
+            if (coinPercentData.length > 0) {
+                const isCoinHighlighted = highlightedAsset === 'COIN';
+                const isFaded = highlightedAsset && highlightedAsset !== 'COIN';
+                
+                datasets.push({
+                    label: categoryData.coin_symbol,
+                    data: coinPercentData,
+                    borderColor: isFaded ? categoryData.coin_color + '40' : categoryData.coin_color,
+                    backgroundColor: categoryData.coin_color + '20',
+                    borderWidth: isCoinHighlighted ? 4 : 3,
+                    borderDash: [5, 5],
+                    pointRadius: 0,
+                    pointHoverRadius: 4,
+                    tension: 0.1,
+                    fill: false,
+                    isCoin: true
+                });
+            }
+
+            // Add company data
+            categoryData.companies.forEach((company, index) => {
+                const percentData = calculatePercentChange(company.prices, startDate);
+                if (percentData.length > 0) {
+                    const isHighlighted = highlightedAsset === company.ticker;
+                    const isFaded = highlightedAsset && highlightedAsset !== company.ticker && highlightedAsset !== 'COIN';
+                    
+                    datasets.push({
+                        label: company.ticker,
+                        data: percentData,
+                        borderColor: isFaded ? company.color + '40' : company.color,
+                        backgroundColor: company.color + '20',
+                        borderWidth: isHighlighted ? 4 : 2,
+                        pointRadius: 0,
+                        pointHoverRadius: 4,
+                        tension: 0.1,
+                        fill: false
+                    });
+                }
+            });
+
+            if (chart) {
+                chart.data.datasets = datasets;
+                chart.update('none');
+            } else {
+                const ctx = document.getElementById('perfChart').getContext('2d');
+                chart = new Chart(ctx, {
+                    type: 'line',
+                    data: { datasets },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        layout: {
+                            padding: { right: 100 }
+                        },
+                        interaction: {
+                            mode: 'index',
+                            intersect: false
+                        },
+                        plugins: {
+                            legend: { display: false },
+                            tooltip: {
+                                backgroundColor: '#1f2937',
+                                titleColor: '#fff',
+                                bodyColor: '#d1d5db',
+                                borderColor: '#374151',
+                                borderWidth: 1,
+                                padding: 12,
+                                callbacks: {
+                                    label: (ctx) => `${ctx.dataset.label}: ${ctx.parsed.y >= 0 ? '+' : ''}${ctx.parsed.y}%`
+                                }
+                            }
+                        },
+                        scales: {
+                            x: {
+                                type: 'time',
+                                time: {
+                                    unit: currentPeriod === '1W' ? 'day' : 
+                                          currentPeriod === '3M' ? 'week' : 'month',
+                                    displayFormats: {
+                                        day: 'MM/dd',
+                                        week: 'MM/dd',
+                                        month: 'yy/MM'
+                                    }
+                                },
+                                grid: { color: '#222' },
+                                ticks: { color: '#6b7280' }
+                            },
+                            y: {
+                                grid: { color: '#222' },
+                                ticks: {
+                                    color: '#6b7280',
+                                    callback: (v) => v + '%'
+                                }
+                            }
+                        }
+                    },
+                    plugins: [{
+                        id: 'endLabels',
+                        afterDraw: (chart) => {
+                            const ctx = chart.ctx;
+                            const chartArea = chart.chartArea;
+                            
+                            const endpoints = [];
+                            
+                            chart.data.datasets.forEach((dataset, i) => {
+                                const meta = chart.getDatasetMeta(i);
+                                if (meta.hidden) return;
+                                
+                                const lastPoint = meta.data[meta.data.length - 1];
+                                if (!lastPoint) return;
+                                
+                                const value = parseFloat(dataset.data[dataset.data.length - 1].y);
+                                endpoints.push({
+                                    y: lastPoint.y,
+                                    originalY: lastPoint.y,
+                                    value: value,
+                                    label: dataset.label,
+                                    color: dataset.borderColor,
+                                    isCoin: dataset.isCoin
+                                });
+                            });
+                            
+                            endpoints.sort((a, b) => a.y - b.y);
+                            
+                            const minGap = 16;
+                            for (let i = 1; i < endpoints.length; i++) {
+                                const prev = endpoints[i - 1];
+                                const curr = endpoints[i];
+                                if (curr.y - prev.y < minGap) {
+                                    curr.y = prev.y + minGap;
+                                }
+                            }
+                            
+                            ctx.save();
+                            endpoints.forEach(ep => {
+                                const sign = ep.value >= 0 ? '+' : '';
+                                const text = `${ep.label} ${sign}${ep.value.toFixed(1)}%`;
+                                
+                                ctx.font = ep.isCoin ? 'bold 11px Inter, sans-serif' : '11px Inter, sans-serif';
+                                ctx.fillStyle = ep.color;
+                                ctx.textAlign = 'left';
+                                ctx.textBaseline = 'middle';
+                                ctx.fillText(text, chartArea.right + 8, ep.y);
+                            });
+                            ctx.restore();
+                        }
+                    }]
+                });
+            }
+        }
+
+        // Update stats list
+        function updateStats() {
+            if (!TREASURY_DATA) return;
+            
+            const categoryData = TREASURY_DATA.categories[currentCategory];
+            if (!categoryData) return;
+
+            const list = document.getElementById('stats-list');
+            const periodLabel = document.getElementById('period-label');
+            const coinBadge = document.getElementById('coin-badge');
+            
+            periodLabel.textContent = currentPeriod;
+            
+            // Update coin badge
+            coinBadge.innerHTML = `
+                <span class="dot" style="background: ${categoryData.coin_color}"></span>
+                <span class="symbol">${categoryData.coin_symbol}</span>
+            `;
+
+            // Get coin performance
+            const coinPerf = categoryData.coin_performance[currentPeriod];
+            const coinPerfClass = coinPerf >= 0 ? 'positive' : 'negative';
+            const coinPerfSign = coinPerf >= 0 ? '+' : '';
+            const coinHighlightClass = highlightedAsset === 'COIN' ? ' highlighted' : '';
+
+            // Get and sort companies
+            const sortedCompanies = categoryData.companies
+                .map(company => ({
+                    ...company,
+                    perf: company.performance[currentPeriod]
+                }))
+                .filter(c => c.perf !== null)
+                .sort((a, b) => b.perf - a.perf);
+
+            // Build HTML
+            let html = `
+                <li class="stats-item coin-row${coinHighlightClass}" data-ticker="COIN">
+                    <span class="stats-rank">-</span>
+                    <div class="stats-asset">
+                        <div class="stats-dot" style="background: ${categoryData.coin_color}"></div>
+                        <div class="stats-info">
+                            <span class="stats-name">${CATEGORY_INFO[currentCategory]?.name || currentCategory}</span>
+                            <span class="stats-ticker">${categoryData.coin_symbol} (기준)</span>
+                        </div>
+                    </div>
+                    <span class="stats-perf ${coinPerfClass}">${coinPerfSign}${coinPerf?.toFixed(1) || '-'}%</span>
+                </li>
+            `;
+
+            html += sortedCompanies.map((company, index) => {
+                const perfClass = company.perf >= 0 ? 'positive' : 'negative';
+                const perfSign = company.perf >= 0 ? '+' : '';
+                const highlightClass = highlightedAsset === company.ticker ? ' highlighted' : '';
+                
+                return `
+                    <li class="stats-item${highlightClass}" data-ticker="${company.ticker}">
+                        <span class="stats-rank">${index + 1}</span>
+                        <div class="stats-asset">
+                            <div class="stats-dot" style="background: ${company.color}"></div>
+                            <div class="stats-info">
+                                <span class="stats-name">${company.name}</span>
+                                <span class="stats-ticker">${company.ticker}</span>
+                            </div>
+                        </div>
+                        <span class="stats-perf ${perfClass}">${perfSign}${company.perf?.toFixed(1) || '-'}%</span>
+                    </li>
+                `;
+            }).join('');
+
+            list.innerHTML = html;
+
+            // Add click events
+            list.querySelectorAll('.stats-item').forEach(item => {
+                item.addEventListener('click', () => {
+                    const ticker = item.dataset.ticker;
+                    if (highlightedAsset === ticker) {
+                        highlightedAsset = null;
+                    } else {
+                        highlightedAsset = ticker;
+                    }
+                    updateChart();
+                    updateStats();
+                });
+            });
+        }
+
+        // Period button events
+        document.querySelectorAll('.period-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                document.querySelectorAll('.period-btn').forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+                currentPeriod = btn.dataset.period;
+                updateChart();
+                updateStats();
+            });
+        });
+
+        // Initialize
+        loadData();
+    </script>
+</body>
+</html>

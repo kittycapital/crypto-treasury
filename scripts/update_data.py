@@ -151,16 +151,27 @@ def get_stock_data(ticker: str, days: int = 400) -> list:
 def get_crypto_data(coin_id: str, symbol: str, days: int = 400) -> list:
     """Fetch crypto price data using CoinGecko API with API key"""
     
+    print(f"  Fetching {coin_id} prices from CoinGecko...")
+    
     try:
-        # CoinGecko Pro API endpoint
-        url = f"https://pro-api.coingecko.com/api/v3/coins/{coin_id}/market_chart"
+        # Check if it's a Demo or Pro API key
+        if COINGECKO_API_KEY.startswith("CG-"):
+            # Demo API
+            url = f"https://api.coingecko.com/api/v3/coins/{coin_id}/market_chart"
+            headers = {
+                "x-cg-demo-api-key": COINGECKO_API_KEY
+            }
+        else:
+            # Pro API
+            url = f"https://pro-api.coingecko.com/api/v3/coins/{coin_id}/market_chart"
+            headers = {
+                "x-cg-pro-api-key": COINGECKO_API_KEY
+            }
+        
         params = {
             "vs_currency": "usd",
             "days": days,
             "interval": "daily"
-        }
-        headers = {
-            "x-cg-pro-api-key": COINGECKO_API_KEY
         }
         
         response = requests.get(url, params=params, headers=headers, timeout=30)
@@ -264,7 +275,8 @@ def main():
         print("  export COINGECKO_API_KEY=your_api_key")
         print("Option 2: Edit the script and replace 'YOUR_API_KEY_HERE'\n")
     else:
-        print(f"\n✓ CoinGecko API key configured\n")
+        api_type = "Demo" if COINGECKO_API_KEY.startswith("CG-") else "Pro"
+        print(f"\n✓ CoinGecko {api_type} API key configured\n")
     
     output_data = {
         "updated_at": datetime.now().strftime("%Y-%m-%d %H:%M"),
@@ -283,14 +295,13 @@ def main():
             "companies": []
         }
         
-        # Fetch crypto data from Binance
-        print(f"  Fetching {config['coin_id']} prices from Binance...")
+        # Fetch crypto data
         coin_prices = get_crypto_data(config["coin_id"], config["coin_symbol"])
         category_data["coin_prices"] = coin_prices
         category_data["coin_performance"] = calculate_performance(coin_prices)
         print(f"    -> {len(coin_prices)} data points")
         
-        time.sleep(0.5)  # Small delay between requests
+        time.sleep(1)  # Rate limiting for CoinGecko
         
         # Fetch stock data for each company
         for i, company in enumerate(config["companies"]):

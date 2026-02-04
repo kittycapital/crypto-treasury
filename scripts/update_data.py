@@ -15,7 +15,7 @@ import time
 # ============================================================
 # CONFIGURATION - Set your CoinGecko API key here
 # ============================================================
-COINGECKO_API_KEY = os.environ.get("CG-Cpup6PximTizhS7JP5yoQBJb", "YOUR_API_KEY_HERE")
+COINGECKO_API_KEY = os.environ.get("COINGECKO_API_KEY", "YOUR_API_KEY_HERE")
 # ============================================================
 
 # Treasury Companies by Crypto

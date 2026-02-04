@@ -25,7 +25,7 @@ jobs:
 
       - name: Run update script
         env:
-          COINGECKO_API_KEY: CG-Cpup6PximTizhS7JP5yoQBJb
+          COINGECKO_API_KEY: ${{ secrets.COINGECKO_API_KEY }}
         run: |
           python scripts/update_data.py
 

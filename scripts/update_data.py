@@ -12,6 +12,12 @@ import yfinance as yf
 import requests
 import time
 
+# ============================================================
+# CONFIGURATION - Set your CoinGecko API key here
+# ============================================================
+COINGECKO_API_KEY = os.environ.get("CG-Cpup6PximTizhS7JP5yoQBJb", "YOUR_API_KEY_HERE")
+# ============================================================
+
 # Treasury Companies by Crypto
 TREASURY_COMPANIES = {
     "BTC": {
@@ -143,62 +149,38 @@ def get_stock_data(ticker: str, days: int = 400) -> list:
 
 
 def get_crypto_data(coin_id: str, symbol: str, days: int = 400) -> list:
-    """Fetch crypto price data using Binance API (free, no auth required)"""
-    
-    # Map coin_id to Binance trading pair
-    BINANCE_SYMBOLS = {
-        "bitcoin": "BTCUSDT",
-        "ethereum": "ETHUSDT",
-        "solana": "SOLUSDT",
-        "hyperliquid": "HYPEUSDT",
-        "sui": "SUIUSDT",
-        "injective-protocol": "INJUSDT",
-        "binancecoin": "BNBUSDT",
-        "bonk": "BONKUSDT",
-        "story-protocol": "IPUSDT",  # May not be available
-    }
-    
-    binance_symbol = BINANCE_SYMBOLS.get(coin_id)
-    
-    if not binance_symbol:
-        print(f"  No Binance symbol for {coin_id}, skipping...")
-        return []
+    """Fetch crypto price data using CoinGecko API with API key"""
     
     try:
-        # Binance klines API - free, no auth required
-        url = "https://api.binance.com/api/v3/klines"
+        # CoinGecko Pro API endpoint
+        url = f"https://pro-api.coingecko.com/api/v3/coins/{coin_id}/market_chart"
         params = {
-            "symbol": binance_symbol,
-            "interval": "1d",
-            "limit": min(days, 1000)  # Binance max is 1000
+            "vs_currency": "usd",
+            "days": days,
+            "interval": "daily"
+        }
+        headers = {
+            "x-cg-pro-api-key": COINGECKO_API_KEY
         }
         
-        response = requests.get(url, params=params, timeout=30)
-        
-        if response.status_code == 400:
-            # Symbol might not exist on Binance
-            print(f"  Symbol {binance_symbol} not found on Binance")
-            return []
-            
+        response = requests.get(url, params=params, headers=headers, timeout=30)
         response.raise_for_status()
         data = response.json()
         
         prices = []
-        for candle in data:
-            # Binance kline: [open_time, open, high, low, close, volume, ...]
-            timestamp = candle[0]
-            close_price = float(candle[4])
+        for item in data.get("prices", []):
+            timestamp, price = item
             date = datetime.fromtimestamp(timestamp / 1000).strftime("%Y-%m-%d")
             
             # Handle very small prices (like BONK)
-            if close_price < 0.01:
-                prices.append({"date": date, "price": round(close_price, 8)})
-            elif close_price < 1:
-                prices.append({"date": date, "price": round(close_price, 6)})
+            if price < 0.01:
+                prices.append({"date": date, "price": round(price, 8)})
+            elif price < 1:
+                prices.append({"date": date, "price": round(price, 6)})
             else:
-                prices.append({"date": date, "price": round(close_price, 2)})
+                prices.append({"date": date, "price": round(price, 2)})
         
-        # Remove duplicates
+        # Remove duplicates (keep last entry for each date)
         seen = {}
         for p in prices:
             seen[p["date"]] = p
@@ -208,7 +190,7 @@ def get_crypto_data(coin_id: str, symbol: str, days: int = 400) -> list:
         return prices
         
     except Exception as e:
-        print(f"  Error fetching {coin_id} from Binance: {e}")
+        print(f"  Error fetching {coin_id}: {e}")
         return []
 
 
@@ -274,6 +256,15 @@ def main():
     print("=" * 60)
     print("Crypto Treasury Companies Data Updater")
     print("=" * 60)
+    
+    # Check for API key
+    if not COINGECKO_API_KEY or COINGECKO_API_KEY == "YOUR_API_KEY_HERE":
+        print("\n⚠️  WARNING: CoinGecko API key not set!")
+        print("Option 1: Set environment variable:")
+        print("  export COINGECKO_API_KEY=your_api_key")
+        print("Option 2: Edit the script and replace 'YOUR_API_KEY_HERE'\n")
+    else:
+        print(f"\n✓ CoinGecko API key configured\n")
     
     output_data = {
         "updated_at": datetime.now().strftime("%Y-%m-%d %H:%M"),

@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>크립토 트레저리 회사 비교</title>
+    <title>크립토 트레저리 회사 퍼포먼스</title>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -253,6 +253,7 @@
                 <button class="period-btn" data-period="1W">1주</button>
                 <button class="period-btn" data-period="3M">3개월</button>
                 <button class="period-btn" data-period="6M">6개월</button>
+                <button class="period-btn" data-period="YTD">YTD</button>
                 <button class="period-btn active" data-period="1Y">1년</button>
             </div>
         </div>
@@ -352,6 +353,12 @@
         // Get start date for period
         function getStartDate(period) {
             const now = new Date();
+            
+            // YTD: January 1st of current year
+            if (period === 'YTD') {
+                return new Date(now.getFullYear(), 0, 1);
+            }
+            
             const days = PERIOD_DAYS[period] || 365;
             return new Date(now - days * 24 * 60 * 60 * 1000);
         }
@@ -384,28 +391,7 @@
             const startDate = getStartDate(currentPeriod);
             const datasets = [];
 
-            // Add coin data first
-            const coinPercentData = calculatePercentChange(categoryData.coin_prices, startDate);
-            if (coinPercentData.length > 0) {
-                const isCoinHighlighted = highlightedAsset === 'COIN';
-                const isFaded = highlightedAsset && highlightedAsset !== 'COIN';
-                
-                datasets.push({
-                    label: categoryData.coin_symbol,
-                    data: coinPercentData,
-                    borderColor: isFaded ? categoryData.coin_color + '40' : categoryData.coin_color,
-                    backgroundColor: categoryData.coin_color + '20',
-                    borderWidth: isCoinHighlighted ? 4 : 3,
-                    borderDash: [5, 5],
-                    pointRadius: 0,
-                    pointHoverRadius: 4,
-                    tension: 0.1,
-                    fill: false,
-                    isCoin: true
-                });
-            }
-
-            // Add company data
+            // Add company data first (so coin line appears on top)
             categoryData.companies.forEach((company, index) => {
                 const percentData = calculatePercentChange(company.prices, startDate);
                 if (percentData.length > 0) {
@@ -425,6 +411,29 @@
                     });
                 }
             });
+
+            // Add coin data LAST so it renders on top
+            const coinPercentData = calculatePercentChange(categoryData.coin_prices, startDate);
+            
+            if (coinPercentData.length > 0) {
+                const isCoinHighlighted = highlightedAsset === 'COIN';
+                const isFaded = highlightedAsset && highlightedAsset !== 'COIN';
+                
+                datasets.push({
+                    label: categoryData.coin_symbol + ' ⬤',  // Add marker to distinguish in tooltip
+                    data: coinPercentData,
+                    borderColor: isFaded ? categoryData.coin_color + '60' : categoryData.coin_color,
+                    backgroundColor: 'transparent',
+                    borderWidth: isCoinHighlighted ? 6 : 4,
+                    borderDash: [12, 6],  // Prominent dashed line
+                    pointRadius: 0,
+                    pointHoverRadius: 6,
+                    tension: 0.1,
+                    fill: false,
+                    isCoin: true,
+                    order: -1  // render on top (lower = on top)
+                });
+            }
 
             if (chart) {
                 chart.data.datasets = datasets;

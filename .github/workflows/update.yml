@@ -37,7 +37,7 @@ jobs:
           pip install requests yfinance
       
       - name: Fetch crypto treasury data
-        run: python scripts/fetch_data.py
+        run: python scripts/update_data.py
       
       - name: Check for changes
         id: changes

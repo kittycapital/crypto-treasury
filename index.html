@@ -1,658 +1,470 @@
-<!DOCTYPE html> 
+<!DOCTYPE html>
 <html lang="ko">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>크립토 트레저리 회사 비교</title>
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-    <style>
-        * { margin: 0; padding: 0; box-sizing: border-box; }
-        body { 
-            font-family: 'Inter', -apple-system, sans-serif; 
-            background: #000; 
-            color: #fff;
-            min-height: 100vh;
-            padding: 20px;
-        }
-        .container { max-width: 1400px; margin: 0 auto; }
-        
-        .header { 
-            display: flex; 
-            justify-content: space-between; 
-            align-items: center; 
-            margin-bottom: 20px;
-            flex-wrap: wrap;
-            gap: 16px;
-        }
-        .title { font-size: 24px; font-weight: 700; }
-        .updated { font-size: 12px; color: #6b7280; }
-        
-        /* Category Tabs */
-        .category-tabs {
-            display: flex;
-            gap: 4px;
-            background: #111;
-            padding: 4px;
-            border-radius: 8px;
-            margin-bottom: 16px;
-            flex-wrap: wrap;
-        }
-        .category-tab {
-            padding: 10px 16px;
-            border: none;
-            background: transparent;
-            color: #9ca3af;
-            font-size: 14px;
-            font-weight: 600;
-            cursor: pointer;
-            border-radius: 6px;
-            transition: all 0.2s;
-            display: flex;
-            align-items: center;
-            gap: 6px;
-        }
-        .category-tab:hover { color: #fff; background: #1a1a1a; }
-        .category-tab.active { background: #1f2937; color: #fff; }
-        .category-tab .coin-dot {
-            width: 8px;
-            height: 8px;
-            border-radius: 50%;
-        }
-        
-        /* Period Buttons */
-        .period-buttons {
-            display: flex;
-            gap: 8px;
-            background: #111;
-            padding: 4px;
-            border-radius: 8px;
-        }
-        .period-btn {
-            padding: 8px 16px;
-            border: none;
-            background: transparent;
-            color: #9ca3af;
-            font-size: 14px;
-            font-weight: 500;
-            cursor: pointer;
-            border-radius: 6px;
-            transition: all 0.2s;
-        }
-        .period-btn:hover { color: #fff; }
-        .period-btn.active { background: #3b82f6; color: #fff; }
-        
-        .controls {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            flex-wrap: wrap;
-            gap: 12px;
-            margin-bottom: 20px;
-        }
-        
-        .main-content {
-            display: grid;
-            grid-template-columns: 1fr 340px;
-            gap: 20px;
-        }
-        @media (max-width: 1024px) {
-            .main-content { grid-template-columns: 1fr; }
-        }
-        
-        .chart-container {
-            background: #111;
-            border-radius: 12px;
-            padding: 20px;
-            height: 520px;
-        }
-        
-        .stats-box {
-            background: #111;
-            border-radius: 12px;
-            padding: 20px;
-            max-height: 520px;
-            overflow-y: auto;
-        }
-        .stats-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 16px;
-            padding-bottom: 12px;
-            border-bottom: 1px solid #222;
-        }
-        .stats-title {
-            font-size: 16px;
-            font-weight: 600;
-            color: #9ca3af;
-        }
-        .coin-badge {
-            display: flex;
-            align-items: center;
-            gap: 6px;
-            padding: 4px 10px;
-            background: #1a1a1a;
-            border-radius: 20px;
-            font-size: 13px;
-            font-weight: 600;
-        }
-        .coin-badge .dot {
-            width: 8px;
-            height: 8px;
-            border-radius: 50%;
-        }
-        
-        .stats-list { list-style: none; }
-        .stats-item {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding: 12px 8px;
-            border-bottom: 1px solid #1a1a1a;
-            cursor: pointer;
-            border-radius: 6px;
-            transition: all 0.2s;
-        }
-        .stats-item:hover { background: #1a1a1a; }
-        .stats-item.highlighted { background: #1e3a5f; }
-        .stats-item:last-child { border-bottom: none; }
-        .stats-item.coin-row {
-            background: #0a0a0a;
-            border: 1px solid #222;
-            margin-bottom: 8px;
-        }
-        .stats-item.coin-row:hover { background: #111; }
-        .stats-item.coin-row.highlighted { background: #1e3a5f; border-color: #3b82f6; }
-        
-        .stats-rank {
-            width: 24px;
-            font-size: 12px;
-            color: #6b7280;
-            font-weight: 500;
-        }
-        .stats-asset {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            flex: 1;
-        }
-        .stats-dot {
-            width: 10px;
-            height: 10px;
-            border-radius: 50%;
-            flex-shrink: 0;
-        }
-        .stats-info {
-            display: flex;
-            flex-direction: column;
-            gap: 2px;
-        }
-        .stats-name { 
-            font-weight: 500; 
-            font-size: 14px;
-            white-space: nowrap;
-            overflow: hidden;
-            text-overflow: ellipsis;
-            max-width: 140px;
-        }
-        .stats-ticker { 
-            color: #6b7280; 
-            font-size: 11px;
-            font-weight: 600;
-        }
-        .stats-perf {
-            font-weight: 600;
-            font-size: 15px;
-            text-align: right;
-            min-width: 70px;
-        }
-        .stats-perf.positive { color: #22c55e; }
-        .stats-perf.negative { color: #ef4444; }
-        
-        /* Scrollbar styling */
-        .stats-box::-webkit-scrollbar {
-            width: 6px;
-        }
-        .stats-box::-webkit-scrollbar-track {
-            background: #1a1a1a;
-            border-radius: 3px;
-        }
-        .stats-box::-webkit-scrollbar-thumb {
-            background: #333;
-            border-radius: 3px;
-        }
-        .stats-box::-webkit-scrollbar-thumb:hover {
-            background: #444;
-        }
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0">
+<title>크립토 트레저리 회사 비교</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700&family=Noto+Sans+KR:wght@400;500;600;700&display=swap" rel="stylesheet">
+<script src="https://t1.kakaocdn.net/kakao_js_sdk/2.7.4/kakao.min.js"></script>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+html{scrollbar-width:none}
+html::-webkit-scrollbar{display:none}
+body{background:#000;color:#e4e4e7;font-family:'Noto Sans KR',sans-serif;min-height:100vh}
 
-        .legend-note {
-            font-size: 11px;
-            color: #6b7280;
-            margin-top: 12px;
-            padding-top: 12px;
-            border-top: 1px solid #222;
-            text-align: center;
-        }
-    </style>
+/* Nav */
+.top-nav{position:sticky;top:0;z-index:100;background:rgba(0,0,0,0.85);backdrop-filter:blur(12px);border-bottom:1px solid #1a1a1a;padding:0 16px;display:flex;align-items:center;justify-content:center;height:52px}
+.nav-title{font-size:14px;font-weight:600;color:#e4e4e7;white-space:nowrap}
+
+/* Container */
+.container{max-width:960px;margin:0 auto;padding:16px 12px 60px}
+
+/* Header */
+.header{margin-bottom:16px}
+.updated{font-size:11px;color:#71717a;margin-top:4px}
+
+/* Cards */
+.card{background:#0a0a0a;border:1px solid #1a1a1a;border-radius:12px;padding:16px;margin-bottom:16px}
+
+/* Category Tabs */
+.category-tabs{display:flex;gap:4px;padding:4px;margin-bottom:16px;flex-wrap:wrap}
+.category-tab{padding:8px 14px;border:1px solid #1a1a1a;background:#111;color:#a1a1aa;font-size:12px;font-weight:600;cursor:pointer;border-radius:6px;transition:all 0.2s;display:flex;align-items:center;gap:6px;font-family:'Noto Sans KR',sans-serif}
+.category-tab:hover{border-color:#333;color:#e4e4e7}
+.category-tab.active{background:#a78bfa;border-color:#a78bfa;color:#000}
+.category-tab .coin-dot{width:8px;height:8px;border-radius:50%}
+
+/* Period Buttons */
+.period-buttons{display:flex;gap:4px;flex-wrap:wrap}
+.period-btn{padding:6px 14px;border:1px solid #1a1a1a;background:#111;color:#a1a1aa;font-size:12px;font-weight:500;cursor:pointer;border-radius:6px;transition:all 0.2s;font-family:'JetBrains Mono',monospace}
+.period-btn:hover{border-color:#333;color:#e4e4e7}
+.period-btn.active{background:#a78bfa;border-color:#a78bfa;color:#000;font-weight:600}
+
+.controls{display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px;margin-bottom:16px}
+
+/* Main Content */
+.main-content{display:grid;grid-template-columns:1fr 320px;gap:16px}
+@media(max-width:1024px){.main-content{grid-template-columns:1fr}}
+
+/* Chart */
+.chart-container{background:#0a0a0a;border:1px solid #1a1a1a;border-radius:12px;padding:16px;height:500px;position:relative}
+.chart-container.watermark::after{content:'Herdvibe.com';position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);font-family:'JetBrains Mono',monospace;font-size:28px;font-weight:600;color:rgba(255,255,255,0.06);pointer-events:none;z-index:2;letter-spacing:2px}
+
+/* Stats Box */
+.stats-box{background:#0a0a0a;border:1px solid #1a1a1a;border-radius:12px;padding:16px;max-height:500px;overflow-y:auto;scrollbar-width:thin;scrollbar-color:#333 #0a0a0a}
+.stats-box::-webkit-scrollbar{width:4px}
+.stats-box::-webkit-scrollbar-track{background:#0a0a0a}
+.stats-box::-webkit-scrollbar-thumb{background:#333;border-radius:2px}
+
+.stats-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;padding-bottom:10px;border-bottom:1px solid #1a1a1a}
+.stats-title{font-size:13px;font-weight:600;color:#a1a1aa}
+.coin-badge{display:flex;align-items:center;gap:6px;padding:4px 10px;background:#1a1a1a;border:1px solid #27272a;border-radius:20px;font-size:12px;font-weight:600;font-family:'JetBrains Mono',monospace;color:#e4e4e7}
+.coin-badge .dot{width:8px;height:8px;border-radius:50%}
+
+.stats-list{list-style:none}
+.stats-item{display:flex;justify-content:space-between;align-items:center;padding:10px 8px;border-bottom:1px solid #111;cursor:pointer;border-radius:6px;transition:all 0.2s}
+.stats-item:hover{background:#111}
+.stats-item.highlighted{background:rgba(167,139,250,0.1);border:1px solid rgba(167,139,250,0.3)}
+.stats-item:last-child{border-bottom:none}
+.stats-item.coin-row{background:#111;border:1px solid #1a1a1a;margin-bottom:8px}
+.stats-item.coin-row:hover{background:#1a1a1a}
+.stats-item.coin-row.highlighted{background:rgba(167,139,250,0.1);border-color:#a78bfa}
+
+.stats-rank{width:22px;font-size:11px;color:#71717a;font-weight:500;font-family:'JetBrains Mono',monospace}
+.stats-asset{display:flex;align-items:center;gap:8px;flex:1}
+.stats-dot{width:10px;height:10px;border-radius:50%;flex-shrink:0}
+.stats-info{display:flex;flex-direction:column;gap:1px}
+.stats-name{font-weight:600;font-size:13px;color:#e4e4e7;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:130px}
+.stats-ticker{color:#71717a;font-size:10px;font-weight:600;font-family:'JetBrains Mono',monospace}
+.stats-perf{font-family:'JetBrains Mono',monospace;font-weight:700;font-size:14px;text-align:right;min-width:70px}
+.stats-perf.positive{color:#22c55e}
+.stats-perf.negative{color:#ef4444}
+
+.legend-note{font-size:10px;color:#52525b;margin-top:10px;padding-top:10px;border-top:1px solid #1a1a1a;text-align:center}
+
+/* Share */
+.share-bar{display:flex;gap:6px;justify-content:center;margin:12px 0 4px;flex-wrap:wrap}
+.share-btn{display:flex;align-items:center;gap:5px;padding:6px 12px;border-radius:6px;border:1px solid #222;background:#0a0a0a;color:#a1a1aa;font-size:11px;cursor:pointer;font-family:'Noto Sans KR',sans-serif;transition:all 0.2s}
+.share-btn:hover{border-color:#444;color:#e4e4e7}
+.share-btn svg{width:14px;height:14px;flex-shrink:0}
+.share-btn.twitter:hover{border-color:#1d9bf0;color:#1d9bf0}
+.share-btn.kakao:hover{border-color:#fee500;color:#fee500}
+.share-btn.telegram:hover{border-color:#26a5e4;color:#26a5e4}
+.share-btn.instagram:hover{border-color:#e1306c;color:#e1306c}
+.share-btn.instagram.copied{border-color:#22c55e;color:#22c55e}
+.share-btn.copy:hover{border-color:#22c55e;color:#22c55e}
+.share-btn.copied{border-color:#22c55e;color:#22c55e}
+
+/* Toast */
+.toast{position:fixed;bottom:20px;right:20px;background:#22c55e;color:#000;padding:10px 16px;border-radius:8px;font-size:13px;font-weight:600;z-index:9999;opacity:0;transform:translateY(10px);transition:all 0.3s ease;pointer-events:none}
+.toast.show{opacity:1;transform:translateY(0)}
+
+.last-updated{text-align:center;font-size:11px;color:#52525b;margin-top:8px}
+
+/* Responsive */
+@media(max-width:640px){
+  .top-nav{padding:0 10px}
+  .nav-title{font-size:12px}
+  .chart-container{height:360px}
+  .chart-container.watermark::after{font-size:20px}
+  .category-tab{padding:6px 10px;font-size:11px}
+  .stats-name{max-width:100px}
+}
+</style>
 </head>
 <body>
-    <div class="container">
-        <div class="header">
-            <div>
-                <h1 class="title">크립토 트레저리 회사 비교</h1>
-                <p class="updated">마지막 업데이트: <span id="updated-time">-</span></p>
-            </div>
-        </div>
-        
-        <div class="category-tabs" id="category-tabs"></div>
-        
-        <div class="controls">
-            <div class="period-buttons">
-                <button class="period-btn" data-period="1W">1W</button>
-                <button class="period-btn" data-period="3M">3M</button>
-                <button class="period-btn" data-period="6M">6M</button>
-                <button class="period-btn active" data-period="1Y">1Y</button>
-                <button class="period-btn" data-period="YTD">YTD</button>
-            </div>
-        </div>
-        
-        <div class="main-content">
-            <div class="chart-container">
-                <canvas id="perfChart"></canvas>
-            </div>
-            
-            <div class="stats-box">
-                <div class="stats-header">
-                    <div class="stats-title">수익률 (<span id="period-label">1Y</span>)</div>
-                    <div class="coin-badge" id="coin-badge">
-                        <span class="dot"></span>
-                        <span class="symbol">BTC</span>
-                    </div>
-                </div>
-                <ul class="stats-list" id="stats-list"></ul>
-                <div class="legend-note">클릭하면 차트에서 해당 라인이 강조됩니다</div>
-            </div>
+
+<nav class="top-nav">
+    <div class="nav-title">크립토 트레저리 회사 비교</div>
+</nav>
+
+<div class="container">
+    <div class="header">
+        <p class="updated">마지막 업데이트: <span id="updated-time">-</span></p>
+    </div>
+
+    <div class="category-tabs" id="category-tabs"></div>
+
+    <div class="controls">
+        <div class="period-buttons">
+            <button class="period-btn" data-period="1W">1W</button>
+            <button class="period-btn" data-period="3M">3M</button>
+            <button class="period-btn" data-period="6M">6M</button>
+            <button class="period-btn active" data-period="1Y">1Y</button>
+            <button class="period-btn" data-period="YTD">YTD</button>
         </div>
     </div>
 
-    <script>
-        // Data will be loaded from JSON
-        let TREASURY_DATA = null;
-        let currentCategory = 'BTC';
-        let currentPeriod = '1Y';
-        let chart = null;
-        let highlightedAsset = null;
-        
-        // Category display info
-        const CATEGORY_INFO = {
-            'BTC': { name: 'Bitcoin', shortName: 'BTC' },
-            'ETH': { name: 'Ethereum', shortName: 'ETH' },
-            'SOL': { name: 'Solana', shortName: 'SOL' },
-            'HYPE': { name: 'Hyperliquid', shortName: 'HYPE' },
-            'SUI': { name: 'Sui', shortName: 'SUI' },
-            'INJ': { name: 'Injective', shortName: 'INJ' },
-            'BNB': { name: 'BNB', shortName: 'BNB' },
-            'BONK': { name: 'Bonk', shortName: 'BONK' },
-            'IP': { name: 'Story', shortName: 'IP' }
-        };
+    <div class="main-content">
+        <div class="chart-container watermark">
+            <canvas id="perfChart"></canvas>
+        </div>
+        <div class="stats-box">
+            <div class="stats-header">
+                <div class="stats-title">수익률 (<span id="period-label">1Y</span>)</div>
+                <div class="coin-badge" id="coin-badge">
+                    <span class="dot"></span>
+                    <span class="symbol">BTC</span>
+                </div>
+            </div>
+            <ul class="stats-list" id="stats-list"></ul>
+            <div class="legend-note">클릭하면 차트에서 해당 라인이 강조됩니다</div>
+        </div>
+    </div>
 
-        // Period to days mapping
-        const PERIOD_DAYS = {
-            '1W': 7,
-            '3M': 90,
-            '6M': 180,
-            '1Y': 365
-        };
+    <!-- Share -->
+    <div class="share-bar">
+        <button class="share-btn twitter" onclick="shareTwitter()"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg>트위터</button>
+        <button class="share-btn kakao" onclick="shareKakao()"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 3c-5.52 0-10 3.36-10 7.5 0 2.66 1.74 5 4.36 6.33-.14.53-.9 3.4-.93 3.61 0 0-.02.17.09.23.11.07.24.03.24.03.32-.04 3.7-2.42 4.28-2.83.62.09 1.27.13 1.96.13 5.52 0 10-3.36 10-7.5S17.52 3 12 3z"/></svg>카카오톡</button>
+        <button class="share-btn telegram" onclick="shareTelegram()"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M11.944 0A12 12 0 0 0 0 12a12 12 0 0 0 12 12 12 12 0 0 0 12-12A12 12 0 0 0 12 0a12 12 0 0 0-.056 0zm4.962 7.224c.1-.002.321.023.465.14a.506.506 0 0 1 .171.325c.016.093.036.306.02.472-.18 1.898-.962 6.502-1.36 8.627-.168.9-.499 1.201-.82 1.23-.696.065-1.225-.46-1.9-.902-1.056-.693-1.653-1.124-2.678-1.8-1.185-.78-.417-1.21.258-1.91.177-.184 3.247-2.977 3.307-3.23.007-.032.014-.15-.056-.212s-.174-.041-.249-.024c-.106.024-1.793 1.14-5.061 3.345-.479.33-.913.49-1.302.48-.428-.008-1.252-.241-1.865-.44-.752-.245-1.349-.374-1.297-.789.027-.216.325-.437.893-.663 3.498-1.524 5.83-2.529 6.998-3.014 3.332-1.386 4.025-1.627 4.476-1.635z"/></svg>텔레그램</button>
+        <button class="share-btn instagram" onclick="shareInstagram(this)"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zM12 0C8.741 0 8.333.014 7.053.072 2.695.272.273 2.69.073 7.052.014 8.333 0 8.741 0 12c0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98C8.333 23.986 8.741 24 12 24c3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98C15.668.014 15.259 0 12 0zm0 5.838a6.162 6.162 0 100 12.324 6.162 6.162 0 000-12.324zM12 16a4 4 0 110-8 4 4 0 010 8zm6.406-11.845a1.44 1.44 0 100 2.881 1.44 1.44 0 000-2.881z"/></svg>인스타그램</button>
+        <button class="share-btn copy" onclick="copyLink(this)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>링크복사</button>
+    </div>
 
-        // Load data
-        async function loadData() {
-            try {
-                const response = await fetch('data/treasury_data.json');
-                TREASURY_DATA = await response.json();
-                document.getElementById('updated-time').textContent = TREASURY_DATA.updated_at;
-                initializeTabs();
-                updateChart();
-                updateStats();
-            } catch (error) {
-                console.error('Failed to load data:', error);
-                document.getElementById('updated-time').textContent = 'Data load failed';
-            }
-        }
+    <div class="last-updated" id="last-updated-bottom"></div>
+</div>
 
-        // Initialize category tabs
-        function initializeTabs() {
-            const tabsContainer = document.getElementById('category-tabs');
-            const categories = Object.keys(TREASURY_DATA.categories);
-            
-            tabsContainer.innerHTML = categories.map(cat => {
-                const data = TREASURY_DATA.categories[cat];
-                const isActive = cat === currentCategory ? 'active' : '';
-                return `
-                    <button class="category-tab ${isActive}" data-category="${cat}">
-                        <span class="coin-dot" style="background: ${data.coin_color}"></span>
-                        ${CATEGORY_INFO[cat]?.shortName || cat}
-                    </button>
-                `;
-            }).join('');
+<div class="toast" id="toast"></div>
 
-            // Add click events
-            tabsContainer.querySelectorAll('.category-tab').forEach(tab => {
-                tab.addEventListener('click', () => {
-                    document.querySelectorAll('.category-tab').forEach(t => t.classList.remove('active'));
-                    tab.classList.add('active');
-                    currentCategory = tab.dataset.category;
-                    highlightedAsset = null;
-                    updateChart();
-                    updateStats();
-                });
-            });
-        }
+<script>
+const SHARE_URL = 'https://herdvibe.com/crypto-treasury';
+const SHARE_TITLE = '크립토 트레저리 회사 비교 - 수익률 분석';
+const SHARE_DESC = '크립토 트레저리 보유 기업 수익률 비교 대시보드 | Herdvibe';
 
-        // Get start date for period
-        function getStartDate(period) {
-            const now = new Date();
-            
-            // YTD: January 1st of current year
-            if (period === 'YTD') {
-                return new Date(now.getFullYear(), 0, 1);
-            }
-            
-            const days = PERIOD_DAYS[period] || 365;
-            return new Date(now - days * 24 * 60 * 60 * 1000);
-        }
+// Toast
+function showToast(msg) {
+    const t = document.getElementById('toast');
+    t.textContent = msg;
+    t.classList.add('show');
+    setTimeout(() => t.classList.remove('show'), 3000);
+}
 
-        // Calculate percent change from prices
-        function calculatePercentChange(prices, startDate) {
-            if (!prices || prices.length === 0) return [];
-            
-            const startStr = startDate.toISOString().split('T')[0];
-            const filtered = prices.filter(p => p.date >= startStr);
-            
-            if (filtered.length === 0) return [];
-            
-            const basePrice = filtered[0].price;
-            if (basePrice === 0) return [];
-            
-            return filtered.map(p => ({
-                x: p.date,
-                y: ((p.price - basePrice) / basePrice * 100).toFixed(2)
-            }));
-        }
-
-        // Update chart
-        function updateChart() {
-            if (!TREASURY_DATA) return;
-            
-            const categoryData = TREASURY_DATA.categories[currentCategory];
-            if (!categoryData) return;
-
-            const startDate = getStartDate(currentPeriod);
-            const datasets = [];
-
-            // Add company data first (so coin line appears on top)
-            categoryData.companies.forEach((company, index) => {
-                const percentData = calculatePercentChange(company.prices, startDate);
-                if (percentData.length > 0) {
-                    const isHighlighted = highlightedAsset === company.ticker;
-                    const isFaded = highlightedAsset && highlightedAsset !== company.ticker && highlightedAsset !== 'COIN';
-                    
-                    datasets.push({
-                        label: company.ticker,
-                        data: percentData,
-                        borderColor: isFaded ? company.color + '40' : company.color,
-                        backgroundColor: company.color + '20',
-                        borderWidth: isHighlighted ? 4 : 2,
-                        pointRadius: 0,
-                        pointHoverRadius: 4,
-                        tension: 0.1,
-                        fill: false
-                    });
-                }
-            });
-
-            // Add coin data LAST so it renders on top
-            const coinPercentData = calculatePercentChange(categoryData.coin_prices, startDate);
-            console.log('Category:', currentCategory);
-            console.log('Coin prices count:', categoryData.coin_prices?.length || 0);
-            console.log('Coin percent data count:', coinPercentData.length);
-            
-            if (coinPercentData.length > 0) {
-                const isCoinHighlighted = highlightedAsset === 'COIN';
-                const isFaded = highlightedAsset && highlightedAsset !== 'COIN';
-                
-                datasets.push({
-                    label: categoryData.coin_symbol,
-                    data: coinPercentData,
-                    borderColor: isFaded ? categoryData.coin_color + '60' : categoryData.coin_color,
-                    backgroundColor: 'transparent',
-                    borderWidth: isCoinHighlighted ? 6 : 5,
-                    borderDash: [10, 5],
-                    pointRadius: 0,
-                    pointHoverRadius: 6,
-                    tension: 0.1,
-                    fill: false,
-                    isCoin: true,
-                    order: -1
-                });
-                console.log('Coin dataset added:', categoryData.coin_symbol);
-            } else {
-                console.warn('No coin data available for', currentCategory);
-            }
-
-            if (chart) {
-                chart.data.datasets = datasets;
-                chart.update('none');
-            } else {
-                const ctx = document.getElementById('perfChart').getContext('2d');
-                chart = new Chart(ctx, {
-                    type: 'line',
-                    data: { datasets },
-                    options: {
-                        responsive: true,
-                        maintainAspectRatio: false,
-                        layout: {
-                            padding: { right: 100 }
-                        },
-                        interaction: {
-                            mode: 'index',
-                            intersect: false
-                        },
-                        plugins: {
-                            legend: { display: false },
-                            tooltip: {
-                                backgroundColor: '#1f2937',
-                                titleColor: '#fff',
-                                bodyColor: '#d1d5db',
-                                borderColor: '#374151',
-                                borderWidth: 1,
-                                padding: 12,
-                                callbacks: {
-                                    label: (ctx) => `${ctx.dataset.label}: ${ctx.parsed.y >= 0 ? '+' : ''}${ctx.parsed.y}%`
-                                }
-                            }
-                        },
-                        scales: {
-                            x: {
-                                type: 'time',
-                                time: {
-                                    unit: currentPeriod === '1W' ? 'day' : 
-                                          currentPeriod === '3M' ? 'week' : 'month',
-                                    displayFormats: {
-                                        day: 'MM/dd',
-                                        week: 'MM/dd',
-                                        month: 'yy/MM'
-                                    }
-                                },
-                                grid: { color: '#222' },
-                                ticks: { color: '#6b7280' }
-                            },
-                            y: {
-                                grid: { color: '#222' },
-                                ticks: {
-                                    color: '#6b7280',
-                                    callback: (v) => v + '%'
-                                }
-                            }
-                        }
-                    },
-                    plugins: [{
-                        id: 'endLabels',
-                        afterDraw: (chart) => {
-                            const ctx = chart.ctx;
-                            const chartArea = chart.chartArea;
-                            
-                            const endpoints = [];
-                            
-                            chart.data.datasets.forEach((dataset, i) => {
-                                const meta = chart.getDatasetMeta(i);
-                                if (meta.hidden) return;
-                                
-                                const lastPoint = meta.data[meta.data.length - 1];
-                                if (!lastPoint) return;
-                                
-                                const value = parseFloat(dataset.data[dataset.data.length - 1].y);
-                                endpoints.push({
-                                    y: lastPoint.y,
-                                    originalY: lastPoint.y,
-                                    value: value,
-                                    label: dataset.label,
-                                    color: dataset.borderColor,
-                                    isCoin: dataset.isCoin
-                                });
-                            });
-                            
-                            endpoints.sort((a, b) => a.y - b.y);
-                            
-                            const minGap = 16;
-                            for (let i = 1; i < endpoints.length; i++) {
-                                const prev = endpoints[i - 1];
-                                const curr = endpoints[i];
-                                if (curr.y - prev.y < minGap) {
-                                    curr.y = prev.y + minGap;
-                                }
-                            }
-                            
-                            ctx.save();
-                            endpoints.forEach(ep => {
-                                const sign = ep.value >= 0 ? '+' : '';
-                                const text = `${ep.label} ${sign}${ep.value.toFixed(1)}%`;
-                                
-                                ctx.font = ep.isCoin ? 'bold 11px Inter, sans-serif' : '11px Inter, sans-serif';
-                                ctx.fillStyle = ep.color;
-                                ctx.textAlign = 'left';
-                                ctx.textBaseline = 'middle';
-                                ctx.fillText(text, chartArea.right + 8, ep.y);
-                            });
-                            ctx.restore();
-                        }
-                    }]
-                });
-            }
-        }
-
-        // Update stats list
-        function updateStats() {
-            if (!TREASURY_DATA) return;
-            
-            const categoryData = TREASURY_DATA.categories[currentCategory];
-            if (!categoryData) return;
-
-            const list = document.getElementById('stats-list');
-            const periodLabel = document.getElementById('period-label');
-            const coinBadge = document.getElementById('coin-badge');
-            
-            periodLabel.textContent = currentPeriod;
-            
-            // Update coin badge
-            coinBadge.innerHTML = `
-                <span class="dot" style="background: ${categoryData.coin_color}"></span>
-                <span class="symbol">${categoryData.coin_symbol}</span>
-            `;
-
-            // Get coin performance
-            const coinPerf = categoryData.coin_performance ? categoryData.coin_performance[currentPeriod] : null;
-            const hasCoinPerf = coinPerf !== null && coinPerf !== undefined && !isNaN(coinPerf);
-            const coinPerfClass = hasCoinPerf ? (coinPerf >= 0 ? 'positive' : 'negative') : '';
-            const coinPerfSign = hasCoinPerf ? (coinPerf >= 0 ? '+' : '') : '';
-            const coinPerfDisplay = hasCoinPerf ? `${coinPerfSign}${coinPerf.toFixed(1)}%` : 'N/A';
-            const coinHighlightClass = highlightedAsset === 'COIN' ? ' highlighted' : '';
-
-            // Get and sort companies
-            const sortedCompanies = categoryData.companies
-                .map(company => ({
-                    ...company,
-                    perf: company.performance[currentPeriod]
-                }))
-                .filter(c => c.perf !== null)
-                .sort((a, b) => b.perf - a.perf);
-
-            // Build HTML
-            let html = `
-                <li class="stats-item coin-row${coinHighlightClass}" data-ticker="COIN">
-                    <span class="stats-rank">-</span>
-                    <div class="stats-asset">
-                        <div class="stats-dot" style="background: ${categoryData.coin_color}"></div>
-                        <div class="stats-info">
-                            <span class="stats-name">${CATEGORY_INFO[currentCategory]?.name || currentCategory}</span>
-                            <span class="stats-ticker">${categoryData.coin_symbol} (기준)</span>
-                        </div>
-                    </div>
-                    <span class="stats-perf ${coinPerfClass}">${coinPerfDisplay}</span>
-                </li>
-            `;
-
-            html += sortedCompanies.map((company, index) => {
-                const perfClass = company.perf >= 0 ? 'positive' : 'negative';
-                const perfSign = company.perf >= 0 ? '+' : '';
-                const highlightClass = highlightedAsset === company.ticker ? ' highlighted' : '';
-                
-                return `
-                    <li class="stats-item${highlightClass}" data-ticker="${company.ticker}">
-                        <span class="stats-rank">${index + 1}</span>
-                        <div class="stats-asset">
-                            <div class="stats-dot" style="background: ${company.color}"></div>
-                            <div class="stats-info">
-                                <span class="stats-name">${company.name}</span>
-                                <span class="stats-ticker">${company.ticker}</span>
-                            </div>
-                        </div>
-                        <span class="stats-perf ${perfClass}">${perfSign}${company.perf?.toFixed(1) || '-'}%</span>
-                    </li>
-                `;
-            }).join('');
-
-            list.innerHTML = html;
-
-            // Add click events
-            list.querySelectorAll('.stats-item').forEach(item => {
-                item.addEventListener('click', () => {
-                    const ticker = item.dataset.ticker;
-                    if (highlightedAsset === ticker) {
-                        highlightedAsset = null;
-                    } else {
-                        highlightedAsset = ticker;
-                    }
-                    updateChart();
-                    updateStats();
-                });
-            });
-        }
-
-        // Period button events
-        document.querySelectorAll('.period-btn').forEach(btn => {
-            btn.addEventListener('click', () => {
-                document.querySelectorAll('.period-btn').forEach(b => b.classList.remove('active'));
-                btn.classList.add('active');
-                currentPeriod = btn.dataset.period;
-                updateChart();
-                updateStats();
-            });
+// Share
+function shareTwitter() {
+    window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent(SHARE_TITLE)}&url=${encodeURIComponent(SHARE_URL)}`, '_blank');
+}
+function shareKakao() {
+    if (window.Kakao && !Kakao.isInitialized()) Kakao.init('a43ed7b39fac35458f4f9df925a279b5');
+    if (window.Kakao) {
+        Kakao.Share.sendDefault({
+            objectType: 'feed',
+            content: { title: SHARE_TITLE, description: SHARE_DESC, imageUrl: 'https://herdvibe.com/og-treasury.png', link: { mobileWebUrl: SHARE_URL, webUrl: SHARE_URL } }
         });
+    }
+}
+function shareTelegram() {
+    window.open(`https://t.me/share/url?url=${encodeURIComponent(SHARE_URL)}&text=${encodeURIComponent(SHARE_TITLE)}`, '_blank');
+}
+function shareInstagram(btn) {
+    try {
+        if (window.parent !== window) { window.parent.postMessage({ type: 'copy', text: SHARE_URL }, '*'); }
+        else { navigator.clipboard.writeText(SHARE_URL); }
+        const orig = btn.innerHTML;
+        btn.classList.add('copied');
+        btn.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>복사됨!';
+        showToast('링크가 복사되었습니다 - 인스타그램에 붙여넣기 하세요 ✓');
+        setTimeout(() => { btn.classList.remove('copied'); btn.innerHTML = orig; }, 2000);
+    } catch(e) { showToast('복사 실패'); }
+}
+function copyLink(btn) {
+    try {
+        if (window.parent !== window) { window.parent.postMessage({ type: 'copy', text: SHARE_URL }, '*'); }
+        else { navigator.clipboard.writeText(SHARE_URL); }
+        const orig = btn.innerHTML;
+        btn.classList.add('copied');
+        btn.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>복사됨!';
+        showToast('링크가 복사되었습니다 ✓');
+        setTimeout(() => { btn.classList.remove('copied'); btn.innerHTML = orig; }, 2000);
+    } catch(e) { showToast('복사 실패'); }
+}
 
-        // Initialize
-        loadData();
-    </script>
+// ===== ORIGINAL LOGIC =====
+let TREASURY_DATA = null;
+let currentCategory = 'BTC';
+let currentPeriod = '1Y';
+let chart = null;
+let highlightedAsset = null;
+
+const CATEGORY_INFO = {
+    'BTC': { name: 'Bitcoin', shortName: 'BTC' },
+    'ETH': { name: 'Ethereum', shortName: 'ETH' },
+    'SOL': { name: 'Solana', shortName: 'SOL' },
+    'HYPE': { name: 'Hyperliquid', shortName: 'HYPE' },
+    'SUI': { name: 'Sui', shortName: 'SUI' },
+    'INJ': { name: 'Injective', shortName: 'INJ' },
+    'BNB': { name: 'BNB', shortName: 'BNB' },
+    'BONK': { name: 'Bonk', shortName: 'BONK' },
+    'IP': { name: 'Story', shortName: 'IP' }
+};
+
+const PERIOD_DAYS = { '1W': 7, '3M': 90, '6M': 180, '1Y': 365 };
+
+async function loadData() {
+    try {
+        const response = await fetch('data/treasury_data.json');
+        TREASURY_DATA = await response.json();
+        document.getElementById('updated-time').textContent = TREASURY_DATA.updated_at;
+        initializeTabs();
+        updateChart();
+        updateStats();
+    } catch (error) {
+        console.error('Failed to load data:', error);
+        document.getElementById('updated-time').textContent = '데이터 로딩 실패';
+    }
+}
+
+function initializeTabs() {
+    const tabsContainer = document.getElementById('category-tabs');
+    const categories = Object.keys(TREASURY_DATA.categories);
+    tabsContainer.innerHTML = categories.map(cat => {
+        const data = TREASURY_DATA.categories[cat];
+        const isActive = cat === currentCategory ? 'active' : '';
+        return `<button class="category-tab ${isActive}" data-category="${cat}"><span class="coin-dot" style="background:${data.coin_color}"></span>${CATEGORY_INFO[cat]?.shortName || cat}</button>`;
+    }).join('');
+
+    tabsContainer.querySelectorAll('.category-tab').forEach(tab => {
+        tab.addEventListener('click', () => {
+            document.querySelectorAll('.category-tab').forEach(t => t.classList.remove('active'));
+            tab.classList.add('active');
+            currentCategory = tab.dataset.category;
+            highlightedAsset = null;
+            updateChart();
+            updateStats();
+        });
+    });
+}
+
+function getStartDate(period) {
+    const now = new Date();
+    if (period === 'YTD') return new Date(now.getFullYear(), 0, 1);
+    const days = PERIOD_DAYS[period] || 365;
+    return new Date(now - days * 24 * 60 * 60 * 1000);
+}
+
+function calculatePercentChange(prices, startDate) {
+    if (!prices || prices.length === 0) return [];
+    const startStr = startDate.toISOString().split('T')[0];
+    const filtered = prices.filter(p => p.date >= startStr);
+    if (filtered.length === 0) return [];
+    const basePrice = filtered[0].price;
+    if (basePrice === 0) return [];
+    return filtered.map(p => ({ x: p.date, y: ((p.price - basePrice) / basePrice * 100).toFixed(2) }));
+}
+
+function updateChart() {
+    if (!TREASURY_DATA) return;
+    const categoryData = TREASURY_DATA.categories[currentCategory];
+    if (!categoryData) return;
+    const startDate = getStartDate(currentPeriod);
+    const datasets = [];
+
+    categoryData.companies.forEach((company) => {
+        const percentData = calculatePercentChange(company.prices, startDate);
+        if (percentData.length > 0) {
+            const isHighlighted = highlightedAsset === company.ticker;
+            const isFaded = highlightedAsset && highlightedAsset !== company.ticker && highlightedAsset !== 'COIN';
+            datasets.push({
+                label: company.ticker,
+                data: percentData,
+                borderColor: isFaded ? company.color + '40' : company.color,
+                backgroundColor: company.color + '20',
+                borderWidth: isHighlighted ? 4 : 2,
+                pointRadius: 0, pointHoverRadius: 4,
+                tension: 0.1, fill: false
+            });
+        }
+    });
+
+    const coinPercentData = calculatePercentChange(categoryData.coin_prices, startDate);
+    if (coinPercentData.length > 0) {
+        const isCoinHighlighted = highlightedAsset === 'COIN';
+        const isFaded = highlightedAsset && highlightedAsset !== 'COIN';
+        datasets.push({
+            label: categoryData.coin_symbol,
+            data: coinPercentData,
+            borderColor: isFaded ? categoryData.coin_color + '60' : categoryData.coin_color,
+            backgroundColor: 'transparent',
+            borderWidth: isCoinHighlighted ? 6 : 5,
+            borderDash: [10, 5],
+            pointRadius: 0, pointHoverRadius: 6,
+            tension: 0.1, fill: false, isCoin: true, order: -1
+        });
+    }
+
+    if (chart) {
+        chart.data.datasets = datasets;
+        chart.update('none');
+    } else {
+        const ctx = document.getElementById('perfChart').getContext('2d');
+        chart = new Chart(ctx, {
+            type: 'line',
+            data: { datasets },
+            options: {
+                responsive: true, maintainAspectRatio: false,
+                layout: { padding: { right: 100 } },
+                interaction: { mode: 'index', intersect: false },
+                plugins: {
+                    legend: { display: false },
+                    tooltip: {
+                        backgroundColor: '#1a1a1a', titleColor: '#e4e4e7', bodyColor: '#a1a1aa', borderColor: '#333', borderWidth: 1, padding: 12,
+                        callbacks: { label: (ctx) => `${ctx.dataset.label}: ${ctx.parsed.y >= 0 ? '+' : ''}${ctx.parsed.y}%` }
+                    }
+                },
+                scales: {
+                    x: {
+                        type: 'time',
+                        time: {
+                            unit: currentPeriod === '1W' ? 'day' : currentPeriod === '3M' ? 'week' : 'month',
+                            displayFormats: { day: 'MM/dd', week: 'MM/dd', month: 'yy/MM' }
+                        },
+                        grid: { color: '#1a1a1a' },
+                        ticks: { color: '#71717a', font: { family: 'JetBrains Mono', size: 10 } }
+                    },
+                    y: {
+                        grid: { color: '#1a1a1a' },
+                        ticks: { color: '#71717a', font: { family: 'JetBrains Mono', size: 10 }, callback: v => v + '%' }
+                    }
+                }
+            },
+            plugins: [{
+                id: 'endLabels',
+                afterDraw: (chart) => {
+                    const ctx = chart.ctx;
+                    const chartArea = chart.chartArea;
+                    const endpoints = [];
+                    chart.data.datasets.forEach((dataset, i) => {
+                        const meta = chart.getDatasetMeta(i);
+                        if (meta.hidden) return;
+                        const lastPoint = meta.data[meta.data.length - 1];
+                        if (!lastPoint) return;
+                        const value = parseFloat(dataset.data[dataset.data.length - 1].y);
+                        endpoints.push({ y: lastPoint.y, originalY: lastPoint.y, value, label: dataset.label, color: dataset.borderColor, isCoin: dataset.isCoin });
+                    });
+                    endpoints.sort((a, b) => a.y - b.y);
+                    const minGap = 16;
+                    for (let i = 1; i < endpoints.length; i++) {
+                        if (endpoints[i].y - endpoints[i-1].y < minGap) endpoints[i].y = endpoints[i-1].y + minGap;
+                    }
+                    ctx.save();
+                    endpoints.forEach(ep => {
+                        const sign = ep.value >= 0 ? '+' : '';
+                        const text = `${ep.label} ${sign}${ep.value.toFixed(1)}%`;
+                        ctx.font = ep.isCoin ? "bold 11px 'JetBrains Mono', monospace" : "11px 'JetBrains Mono', monospace";
+                        ctx.fillStyle = ep.color;
+                        ctx.textAlign = 'left';
+                        ctx.textBaseline = 'middle';
+                        ctx.fillText(text, chartArea.right + 8, ep.y);
+                    });
+                    ctx.restore();
+                }
+            }]
+        });
+    }
+}
+
+function updateStats() {
+    if (!TREASURY_DATA) return;
+    const categoryData = TREASURY_DATA.categories[currentCategory];
+    if (!categoryData) return;
+    const list = document.getElementById('stats-list');
+    const periodLabel = document.getElementById('period-label');
+    const coinBadge = document.getElementById('coin-badge');
+    periodLabel.textContent = currentPeriod;
+    coinBadge.innerHTML = `<span class="dot" style="background:${categoryData.coin_color}"></span><span class="symbol">${categoryData.coin_symbol}</span>`;
+
+    const coinPerf = categoryData.coin_performance ? categoryData.coin_performance[currentPeriod] : null;
+    const hasCoinPerf = coinPerf !== null && coinPerf !== undefined && !isNaN(coinPerf);
+    const coinPerfClass = hasCoinPerf ? (coinPerf >= 0 ? 'positive' : 'negative') : '';
+    const coinPerfSign = hasCoinPerf ? (coinPerf >= 0 ? '+' : '') : '';
+    const coinPerfDisplay = hasCoinPerf ? `${coinPerfSign}${coinPerf.toFixed(1)}%` : 'N/A';
+    const coinHighlightClass = highlightedAsset === 'COIN' ? ' highlighted' : '';
+
+    const sortedCompanies = categoryData.companies
+        .map(c => ({ ...c, perf: c.performance[currentPeriod] }))
+        .filter(c => c.perf !== null)
+        .sort((a, b) => b.perf - a.perf);
+
+    let html = `<li class="stats-item coin-row${coinHighlightClass}" data-ticker="COIN">
+        <span class="stats-rank">-</span>
+        <div class="stats-asset"><div class="stats-dot" style="background:${categoryData.coin_color}"></div><div class="stats-info"><span class="stats-name">${CATEGORY_INFO[currentCategory]?.name || currentCategory}</span><span class="stats-ticker">${categoryData.coin_symbol} (기준)</span></div></div>
+        <span class="stats-perf ${coinPerfClass}">${coinPerfDisplay}</span>
+    </li>`;
+
+    html += sortedCompanies.map((c, i) => {
+        const perfClass = c.perf >= 0 ? 'positive' : 'negative';
+        const perfSign = c.perf >= 0 ? '+' : '';
+        const hlClass = highlightedAsset === c.ticker ? ' highlighted' : '';
+        return `<li class="stats-item${hlClass}" data-ticker="${c.ticker}">
+            <span class="stats-rank">${i + 1}</span>
+            <div class="stats-asset"><div class="stats-dot" style="background:${c.color}"></div><div class="stats-info"><span class="stats-name">${c.name}</span><span class="stats-ticker">${c.ticker}</span></div></div>
+            <span class="stats-perf ${perfClass}">${perfSign}${c.perf?.toFixed(1) || '-'}%</span>
+        </li>`;
+    }).join('');
+
+    list.innerHTML = html;
+    list.querySelectorAll('.stats-item').forEach(item => {
+        item.addEventListener('click', () => {
+            const ticker = item.dataset.ticker;
+            highlightedAsset = highlightedAsset === ticker ? null : ticker;
+            updateChart();
+            updateStats();
+        });
+    });
+}
+
+document.querySelectorAll('.period-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+        document.querySelectorAll('.period-btn').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        currentPeriod = btn.dataset.period;
+        updateChart();
+        updateStats();
+    });
+});
+
+loadData();
+</script>
 </body>
 </html>

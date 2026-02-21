@@ -178,7 +178,7 @@ function showToast(msg){const t=document.getElementById('toast');t.textContent=m
 function shareTwitter(){window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent(SHARE_TITLE)}&url=${encodeURIComponent(SHARE_URL)}`,'_blank')}
 function shareKakao(){if(window.Kakao&&!Kakao.isInitialized())Kakao.init('a43ed7b39fac35458f4f9df925a279b5');if(window.Kakao){Kakao.Share.sendDefault({objectType:'feed',content:{title:SHARE_TITLE,description:SHARE_DESC,imageUrl:'https://herdvibe.com/og-treasury.png',link:{mobileWebUrl:SHARE_URL,webUrl:SHARE_URL}}})}}
 function shareTelegram(){window.open(`https://t.me/share/url?url=${encodeURIComponent(SHARE_URL)}&text=${encodeURIComponent(SHARE_TITLE)}`,'_blank')}
-function clipCopy(text){if(window.parent!==window){window.parent.postMessage({type:'copy',text:text},'*');return Promise.resolve()}if(navigator.clipboard&&navigator.clipboard.writeText){return navigator.clipboard.writeText(text).catch(function(){return fallbackCopy(text)})}return fallbackCopy(text)}
+function clipCopy(text){if(window.parent!==window){window.parent.postMessage({type:'copy',text:text},'*')}if(navigator.clipboard&&navigator.clipboard.writeText&&window.isSecureContext){return navigator.clipboard.writeText(text).catch(function(){return fallbackCopy(text)})}return fallbackCopy(text)}
 function fallbackCopy(text){var ta=document.createElement('textarea');ta.value=text;ta.style.cssText='position:fixed;left:-9999px;top:-9999px';document.body.appendChild(ta);ta.focus();ta.select();try{document.execCommand('copy')}catch(e){}document.body.removeChild(ta);return Promise.resolve()}
 function shareInstagram(btn){clipCopy(SHARE_URL).then(function(){var orig=btn.innerHTML;btn.classList.add('copied');btn.innerHTML='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>복사됨!';showToast('링크가 복사되었습니다 - 인스타그램에 붙여넣기 하세요 ✓');setTimeout(function(){btn.classList.remove('copied');btn.innerHTML=orig},2000)}).catch(function(){showToast('복사 실패')})}
 function copyLink(btn){clipCopy(SHARE_URL).then(function(){var orig=btn.innerHTML;btn.classList.add('copied');btn.innerHTML='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>복사됨!';showToast('링크가 복사되었습니다 ✓');setTimeout(function(){btn.classList.remove('copied');btn.innerHTML=orig},2000)}).catch(function(){showToast('복사 실패')})}
@@ -308,6 +308,12 @@ function updateStats(){
 document.querySelectorAll('.period-btn').forEach(btn=>{btn.addEventListener('click',()=>{document.querySelectorAll('.period-btn').forEach(b=>b.classList.remove('active'));btn.classList.add('active');currentPeriod=btn.dataset.period;updateChart();updateStats();});});
 
 loadData();
+</script>
+<script>
+function sendHeight(){var h=document.documentElement.scrollHeight;window.parent.postMessage({id:'crypto-treasury',height:h},'*')}
+window.addEventListener('load',function(){sendHeight();setTimeout(sendHeight,500);setTimeout(sendHeight,1500)});
+window.addEventListener('resize',sendHeight);
+new MutationObserver(sendHeight).observe(document.body,{childList:true,subtree:true,attributes:true});
 </script>
 </body>
 </html>
